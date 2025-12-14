@@ -1,0 +1,415 @@
+@precedence {
+  subscript
+  arguments
+  suffix @left
+  prefix @left
+  mult @left
+  add @left
+  bitShift @left  
+  greaterLess @left
+  equal @left
+  bitAnd @left
+  bitXor @left
+  bitOr @left
+  logicAnd @left
+  logicOr @left
+  concat @left
+  params
+  array
+  specifiers
+  more
+  structName  
+  else @right
+  caseLabel
+  simpleTypeIdentifier
+  statement
+  assign @right
+  ternary @right
+}
+
+@top Program {
+  topLevelItem*
+}
+
+topLevelItem {
+  FunctionDefinition |
+  Declaration |
+  // Import: shadertoys ...
+  emptyDeclaration |
+  statement
+}
+
+@skip { ppSpace } {
+  ppEnd { BlockComment* LineComment? "\n" }
+
+  PreprocDirective {
+    pp<"version"> Number "es" ppEnd |
+    pp<"include"> String? ppEnd |
+    PreprocDirectiveName PreprocArg ppEnd
+  }
+}
+
+FunctionDefinition {
+  declarationSpecifiers FunctionDeclarator CompoundStatement |
+  declarationSpecifiers FunctionDeclarator ";"
+}
+
+Declaration {
+  declarationSpecifiers commaSep1<declarator | InitDeclarator> ";"
+}
+
+ declarationSpecifiers {
+   typeQualifier* ~specifiers typeSpecifier
+ }
+
+ typeQualifier {
+  storageQualifier | LayoutQualifier | interpolationQualifier | invariantQualifier | precisionQualifier
+}
+
+storageQualifier {
+  kw<"const"> | kw<"in"> | kw<"out"> | kw<"centroid"> | kw<"uniform">
+}
+
+LayoutQualifier {
+  kw<"layout"> "(" commaSep1<layoutQualifierId> ")"
+}
+
+layoutQualifierId {
+  Identifier |
+  Identifier "=" Number
+}
+
+interpolationQualifier {
+  kw<"smooth"> | kw<"flat">
+}
+
+invariantQualifier {
+  kw<"invariant">
+}
+
+precisionQualifier {
+  kw<"highp"> | kw<"mediump"> | kw<"lowp">
+}
+
+ declarator {
+   ArrayDeclarator {
+      declarator ~identifier !array ("[" expression? "]")+
+   } |
+   ParenthesizedDeclarator[@dynamicPrecedence=-10] {
+     "(" declarator ")"
+   } |
+   IdentifierDefinition ~identifier
+ }
+
+ FunctionDeclarator {
+  IdentifierDefinition !params ParameterList !specifiers
+ }
+
+InitDeclarator {
+  declarator ~identifier "=" expression
+}
+
+CompoundStatement {
+  !statement "{" topLevelItem* !statement "}"
+}
+
+ArraySpecifier {
+  typeSpecifier "[" expression? "]" 
+}
+
+typeSpecifier[@isGroup=Type] {
+  StructSpecifier { kw<"struct"> TypeIdentifier? !structName "{" StructDeclarationList "}" } |
+  ArraySpecifier |
+  primitiveType ~afterPrimitive |
+  TypeIdentifier !simpleTypeIdentifier
+}
+
+StructDeclarationList {
+  structDeclarationListItem+
+}
+
+structDeclarationListItem {
+  FieldDeclaration {
+    typeQualifier* typeSpecifier commaSep1<Identifier> ";"
+  }
+}
+
+ParameterList {
+  "(" ~argOrParam commaSep<(ParameterDeclaration)> ")"
+}
+
+ParameterDeclaration {
+  declarationSpecifiers declarator?
+}
+
+statement[@isGroup=Statement] {
+  CaseStatement |
+  nonCaseStatement 
+}
+
+nonCaseStatement {
+  CompoundStatement |
+  ExpressionStatement |
+  SwitchStatement |
+  IfStatement |
+  DoStatement |
+  WhileStatement |
+  ForStatement |
+  ReturnStatement |
+  BreakStatement |
+  ContinueStatement |
+  PrecisionStatement
+}
+
+PrecisionStatement {
+  kw<"precision"> precisionQualifier primitiveType ";"
+}
+
+ExpressionStatement {
+  (expression | CommaExpression)? ";"
+}
+
+IfStatement {
+  kw<"if"> ConditionClause statement (!else kw<"else"> statement)?
+}
+
+SwitchStatement {
+  kw<"switch"> ConditionClause CompoundStatement
+}
+
+CaseStatement {
+  (kw<"case"> expression | kw<"default">) ":" (!caseLabel (nonCaseStatement | Declaration))*
+}
+
+WhileStatement {
+  kw<"while"> ConditionClause statement
+}
+
+DoStatement {
+  kw<"do"> statement kw<"while"> ParenthesizedExpression ";"
+}
+
+ForStatement {
+  kw<"for"> "(" (Declaration | (expression | CommaExpression)? ";") (expression | CommaExpression)? ";" (expression | CommaExpression)? ")" statement
+}
+
+ReturnStatement {
+  kw<"return"> (expression | CommaExpression)? ";"
+}
+
+BreakStatement {
+  kw<"break"> ";"
+}
+
+ContinueStatement {
+  kw<"continue"> ";"
+}
+
+expression[@isGroup=Expression] {
+  ConditionalExpression |
+  AssignmentExpression |
+  CallExpression |
+  BinaryExpression |
+  SubscriptExpression |
+  FieldExpression |
+  ParenthesizedExpression |
+  Identifier ~identifier |
+  Number | 
+  kw<"true"> |
+  kw<"false"> |
+  UnaryExpression |
+  UpdateExpression
+}
+
+CommaExpression {
+  expression !more "," (expression | CommaExpression)
+}
+
+ConditionalExpression {
+  expression !ternary "?" expression ":" expression
+}
+
+AssignmentExpression {
+  (Identifier ~identifier |
+   FieldExpression |
+   SubscriptExpression |
+   ParenthesizedExpression) !assign (UpdateOp | "=") (expression)
+}
+
+
+UnaryExpression {
+  (LogicOp<"!"> | ArithOp<"+" | "-"> | BitOp<"~">) !suffix expression
+}
+
+BinaryExpression {
+  expression !add ArithOp<"+" | "-"> expression |
+  expression !mult (ArithOp { "*" } | ArithOp<"/" | "%">) expression |
+  expression !logicAnd LogicOp { "&&" } expression |
+  expression !logicOr LogicOp { "||" } expression |
+  expression !bitOr BitOp<"|"> expression |
+  expression !bitXor BitOp<"^"> expression |
+  expression !bitAnd BitOp { "&" } expression |
+  expression !equal CompareOp<"==" | "!="> expression |
+  expression !greaterLess
+    CompareOp<"<=" | ">=" | "<=>" | "<" | ">"> expression |
+  expression !bitShift BitOp<"<<" | ">>"> expression |
+  expression !concat incDec expression
+}
+
+UpdateExpression {
+  incDec !prefix expression | expression !suffix incDec
+}
+
+SubscriptExpression {
+  expression !subscript "[" expression "]"
+}
+
+CallExpression {
+  expression !arguments ArgumentList |
+  primitiveType ~afterPrimitive ArgumentList |
+  ArraySpecifier !array ArgumentList
+}
+
+ArgumentList {
+  "(" ~argOrParam commaSep<(expression)> ")"
+}
+
+FieldExpression {
+  expression !subscript "." FieldIdentifier
+}
+
+ParenthesizedExpression {
+  "(" (expression | CommaExpression) ")"
+}
+
+Identifier[@dynamicPrecedence=-1] {
+  identifier
+}
+
+ IdentifierDefinition {
+  identifier
+}
+
+TypeIdentifier {
+  identifier ~identifier
+}
+
+FieldIdentifier {
+  identifier
+}
+
+emptyDeclaration {
+  typeSpecifier ";"
+}
+
+ConditionClause {
+  "(" (
+    (Declaration { declarationSpecifiers (declarator | InitDeclarator) })? ","? (expression | CommaExpression)
+  ) ")"
+}
+
+primitiveType {
+  @specialize[@name=PrimitiveType]<identifier,
+    "void" | "bool" | "int" | "uint" | "float" | "vec2" | "vec3" | "vec4" | "bvec2" | "bvec3" | "bvec4" | 
+    "ivec2" | "ivec3" | "ivec4" | "uvec2" | "uvec3" | "uvec4" | "mat2" | "mat3" | "mat4" | "mat2x2" | 
+    "mat2x3" | "mat2x4" | "mat3x2" | "mat3x3" | "mat3x4" | "mat4x2" | "mat4x3" | "mat4x4" |
+    "sampler2D" | "sampler3D" | "samplerCube" | "samplerCubeShadow" | "sampler2DShadow" |
+    "sampler2DArray" | "sampler2DArrayShadow" |
+    "isampler2D" | "isampler3D" | "isamplerCube" | "isampler2DArray" | "usampler2D" | 
+    "usampler3D" | "usamplerCube" | "usampler2DArray"
+    >
+  }
+
+  @skip {} {
+    String[isolate] {
+      '"' (stringContent | EscapeSequence)* '"' |
+      "'" (stringContent | EscapeSequence)* "'"
+    }
+  }
+  
+  kw<term> { @specialize[@name={term}]<identifier, term> }
+  
+  commaSep<term> { "" | term ("," term)* }
+  
+  commaSep1<term> { term ("," term)* }
+  
+  @skip { whitespace | LineComment | BlockComment | PreprocDirective }
+
+  @external tokens preprocArg from "./tokens.js" { PreprocArg }
+  
+@tokens {
+  whitespace {
+    ($[ \t\r\n] | "\\" "\r"? "\n")+
+  }
+
+  pp[@name="#" {name}]<name> { "#" $[ \t]* name }
+
+  PreprocDirectiveName {
+    "#" $[ \t]* $[a-zA-Z] $[a-zA-Z0-9_]*
+  }
+
+  @precedence { pp, PreprocDirectiveName }
+
+  ppSpace { $[ \t]+ }
+
+  stringContent { ![\\\n'"]+ }
+
+  EscapeSequence {
+    "\\" (
+      ![xuU] |
+      $[0-9] $[0-9] $[0-9]? |
+      "x" $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F]* |
+      "u" $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F]  |
+      "U" $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F] $[0-9a-fA-F]
+    )
+  }
+
+  @precedence { "(", ppSpace }
+
+  Number {
+    ("0x" | "0b")?
+    (($[0-9]+ ("'" $[0-9]+)* |
+     "0b" $[0-9]+ ("'" $[0-9]+)* |
+     "0x" $[0-9a-fA-F]+ ("'" $[0-9a-fA-F]+)*)
+     ("." ($[0-9a-fA-F]+ ("'" $[0-9a-fA-F]+)*)?)? |
+     "." $[0-9]+ ("'" $[0-9]+)*)
+    ($[eEpP] ($[-\+]? $[0-9a-fA-F]+ ("'" $[0-9a-fA-F]+)*)?)? ("u" | "l" | "U" | "L" | "f" | "F")*
+  }
+
+  @precedence { Number, "." }
+
+  identifier {
+    $[a-zA-Z_] $[a-zA-Z0-9_]*
+  }
+
+  LineComment[isolate] { "//" ("\\" (![\n] | "\\r"? "\\n") | ![\n])* }
+
+  BlockComment[isolate] { "/*" blockCommentRest }
+
+  blockCommentRest { ![*] blockCommentRest | "*" blockCommentAfterStar }
+
+  blockCommentAfterStar { "/" | "*" blockCommentAfterStar | ![/*] blockCommentRest }
+
+  @precedence { LineComment, BlockComment, ArithOp }
+
+  ArithOp<expr> { expr }
+
+  BitOp<expr> { expr }
+
+  CompareOp<expr> { expr }
+
+  LogicOp<expr> { expr }
+
+  UpdateOp {
+    ($[*/%+\-&^|] | "<<" | ">>") "="
+  }
+
+  incDec[@name=UpdateOp] { "++" | "--" }
+
+  "(" ")" "{" "}" "[" "]"
+  "," 
+}
+
+@external propSource glslHighlighting from "./highlighting.js"
+
+@detectDelim

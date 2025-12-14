@@ -1,0 +1,25 @@
+{
+  "name": "ivytoy",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "grammar": "lezer-generator src/glsl-lang/glsl.grammar -o src/glsl-lang/parser.js"
+  },
+  "devDependencies": {
+    "@lezer/generator": "^1.8.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.10.0",
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.39.4",
+    "@lezer/highlight": "^1.2.3",
+    "@lezer/lr": "^1.4.5"
+  }
+}
