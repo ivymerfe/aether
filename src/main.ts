@@ -109,28 +109,9 @@ window.addEventListener("keydown", (e) => {
   lastKey = e.code;
 });
 
-canvas.addEventListener("keydown", (e) => {
-  if (e.code == "KeyF") {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-      showEditor(true);
-    } else {
-      showEditor(!editorShown);
-    }
-  }
-});
-
-window.addEventListener("keyup", async (e) => {
-  if (e.code == "AltLeft" && lastKey == "AltLeft") {
-    if (view.hasFocus) {
-      canvas.focus();
-    } else {
-      showEditor(true);
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      }
-      view.focus();
-    }
+document.addEventListener('mousedown', e => {
+  if (!editorContainer.contains(e.target as Node)) {
+    e.preventDefault();
   }
 });
 

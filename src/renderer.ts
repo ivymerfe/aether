@@ -53,9 +53,10 @@ export class GLSLRenderer {
     this.startTime = performance.now();
 
     canvas.addEventListener("mousemove", (e) => {
-      if (document.activeElement === canvas) {
-        this.mouseX = e.clientX;
-        this.mouseY = e.clientY;
+      if (this.buttonPressed) {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
       }
     });
     canvas.addEventListener("mousedown", () => {

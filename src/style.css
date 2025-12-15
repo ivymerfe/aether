@@ -5,8 +5,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  --background: #121212;
-  --focused-background: #1e1e1e;
+  background-color: #1a1a1a;
 }
 
 body {
@@ -19,7 +18,7 @@ body {
   top: 0;
   left: 0;
   font-size: large;
-  background-color: #202020;
+  background-color: #202020aa;
 }
 
 #app {
@@ -66,14 +65,15 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+  padding-right: 1rem;
 }
 
 #resizer {
   position: absolute;
   z-index: 100;
   top: 0;
-  right: -5px;
-  width: 5px;
+  right: 0;
+  width: 10px;
   height: 100%;
   cursor: col-resize;
 }
@@ -98,11 +98,6 @@ body {
 .cm-editor {
   height: 100%;
   width: 100%;
-  background-color: var(--background);
-}
-
-.cm-focused {
-  background-color: var(--focused-background);
 }
 
 .cm-scroller {

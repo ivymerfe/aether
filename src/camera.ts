@@ -7,6 +7,8 @@ export class Camera {
     right: [number, number, number];
     up: [number, number, number];
 
+    fov: number = 90 * Math.PI / 180; // in radians
+
     constructor(
         position: [number, number, number] = [0, 0, 0],
         yaw: number = 0,
@@ -60,6 +62,23 @@ export class Camera {
         } else if (delta > 0) {
             this.speed /= 1.2;
         }
+    }
+
+    lookAt(dir: [number, number, number]) {
+        const dx = dir[0];
+        const dy = dir[1];
+        const dz = dir[2];
+        this.yaw = Math.atan2(-dx, dz);
+        this.pitch = Math.atan2(dy, Math.sqrt(dx * dx + dz * dz));
+        this.updateVectors();
+    }
+
+    move(deltaTime: number, dx: number, dy: number, dz: number) {
+        this.position = [
+            this.position[0] + dx * this.speed * deltaTime,
+            this.position[1] + dy * this.speed * deltaTime,
+            this.position[2] + dz * this.speed * deltaTime
+        ];
     }
 
     onInput(deltaTime: number, x: number, y: number, z: number, f: number) {
