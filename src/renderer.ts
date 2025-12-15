@@ -1,4 +1,5 @@
 import { Camera } from "./camera";
+import { InputManager } from "./inputManager";
 
 const libCode = `
 float tanh(float x) {
@@ -34,14 +35,16 @@ export class GLSLRenderer {
   private mouseY: number = 0
   private buttonPressed: boolean = false;
 
-  private cameraFocused: boolean = false;
-  private camera: Camera = new Camera();
+  private inputManager: InputManager;
+  private camera: Camera;
   private keyMap: { [key: string]: number } = {};
 
-  constructor(canvas: HTMLCanvasElement, errorsDiv: HTMLDivElement, statusDiv: HTMLDivElement) {
+  constructor(canvas: HTMLCanvasElement, errorsDiv: HTMLDivElement, statusDiv: HTMLDivElement, inputManager: InputManager) {
     this.canvas = canvas;
     this.errorsDiv = errorsDiv;
     this.statusDiv = statusDiv;
+    this.inputManager = inputManager;
+    this.camera = inputManager.getCamera();
     this.gl = canvas.getContext("webgl");
 
     if (!this.gl) {
@@ -49,56 +52,6 @@ export class GLSLRenderer {
     }
 
     this.startTime = performance.now();
-
-    this.canvas.width = this.canvas.clientWidth;
-    this.canvas.height = this.canvas.clientHeight;
-
-    window.addEventListener("resize", () => {
-      this.canvas.width = this.canvas.clientWidth;
-      this.canvas.height = this.canvas.clientHeight;
-    });
-    canvas.addEventListener("click", async () => {
-      if (!document.pointerLockElement) {
-        await canvas.requestPointerLock();
-      }
-    });
-    canvas.addEventListener("keydown", async (e) => {
-      if (!e.repeat) {
-        if (e.code == "KeyE") {
-          if (!document.pointerLockElement) {
-            await canvas.requestPointerLock()
-          } else {
-            document.exitPointerLock();
-          }
-        } else if (e.code == "KeyR") {
-          this.camera.position = [0, 0, 0];
-        }
-      }
-      this.keyMap[e.code] = 1;
-    });
-    canvas.addEventListener("keyup", (e) => {
-      this.keyMap[e.code] = 0;
-    });
-    canvas.addEventListener("focusout", () => {
-      document.exitPointerLock();
-    });
-    document.addEventListener("pointerlockchange", () => {
-      if (document.pointerLockElement === canvas) {
-        this.cameraFocused = true;
-      } else {
-        this.cameraFocused = false;
-      }
-    }, false);
-    document.addEventListener("mousemove", (e) => {
-      if (this.cameraFocused) {
-        this.camera.onMouse(e.movementX * -0.002, e.movementY * -0.002);
-      }
-    }, false);
-    document.addEventListener("wheel", (e) => {
-      if (this.cameraFocused) {
-        this.camera.onScroll(e.deltaY);
-      }
-    }, false);
 
     canvas.addEventListener("mousemove", (e) => {
       if (document.activeElement === canvas) {
@@ -112,17 +65,6 @@ export class GLSLRenderer {
     canvas.addEventListener("mouseup", () => {
       this.buttonPressed = false;
     });
-  }
-
-  private isPressed(key: string): number {
-    return this.keyMap[key] || 0;
-  }
-
-  private handleInput(deltaTime: number) {
-    const movementX = this.isPressed("KeyD") - this.isPressed("KeyA");
-    const movementY = this.isPressed("Space") - this.isPressed("ShiftLeft");
-    const movementZ = this.isPressed("KeyW") - this.isPressed("KeyS");
-    this.camera.onInput(deltaTime, movementX, movementY, movementZ);
   }
 
   private updateStatus(fps: number) {
@@ -253,7 +195,7 @@ export class GLSLRenderer {
 
       const now = performance.now();
       const deltaTime = (now - this.lastRenderTime) / 1000.0;
-      this.handleInput(deltaTime);
+      this.inputManager.tick(deltaTime);
       this.updateStatus(1.0 / deltaTime);
       this.lastRenderTime = now;
 
