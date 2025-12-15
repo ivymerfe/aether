@@ -73,7 +73,8 @@ export class InputManager {
         const movementX = this.isPressed("KeyD") - this.isPressed("KeyA");
         const movementY = this.isPressed("Space") - this.isPressed("ShiftLeft");
         const movementZ = this.isPressed("KeyW") - this.isPressed("KeyS");
-        this.camera.onInput(deltaTime, movementX, movementY, movementZ);
+        const movementF = this.isPressed("KeyQ");
+        this.camera.onInput(deltaTime, movementX, movementY, movementZ, movementF);
     }
 
     getCamera(): Camera {
