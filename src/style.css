@@ -5,7 +5,8 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #181818;
+  --background: #121212;
+  --focused-background: #1e1e1e;
 }
 
 body {
@@ -18,7 +19,7 @@ body {
   top: 0;
   left: 0;
   font-size: large;
-  background-color: #202020c0;
+  background-color: #202020;
 }
 
 #app {
@@ -60,6 +61,7 @@ body {
 }
 
 #editor-container {
+  width: 40%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -90,10 +92,15 @@ body {
   font-size: large;
   height: fit-content;
   white-space: pre-wrap;
-  background-color: #1e1e1ef0;
+  background-color: #1e1e1e;
 }
 
 .cm-editor {
   height: 100%;
   width: 100%;
+  background-color: var(--background);
+}
+
+.cm-focused {
+  background-color: var(--focused-background);
 }

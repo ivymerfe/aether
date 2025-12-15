@@ -37,7 +37,6 @@ export class GLSLRenderer {
 
   private inputManager: InputManager;
   private camera: Camera;
-  private keyMap: { [key: string]: number } = {};
 
   constructor(canvas: HTMLCanvasElement, errorsDiv: HTMLDivElement, statusDiv: HTMLDivElement, inputManager: InputManager) {
     this.canvas = canvas;
@@ -133,7 +132,7 @@ export class GLSLRenderer {
       uniform float iTime;
       uniform vec2 iResolution;
       uniform vec4 iMouse;
-      uniform vec3 iCameraPos;
+      uniform vec3 iCameraPosition;
       uniform vec3 iCameraForward;
       uniform vec3 iCameraRight;
       uniform vec3 iCameraUp;
@@ -180,7 +179,7 @@ export class GLSLRenderer {
     const iTimeLoc = this.gl.getUniformLocation(this.program, "iTime");
     const iResolutionLoc = this.gl.getUniformLocation(this.program, "iResolution");
     const iMouseLoc = this.gl.getUniformLocation(this.program, "iMouse");
-    const iCameraPosLoc = this.gl.getUniformLocation(this.program, "iCameraPos");
+    const iCameraPositionLoc = this.gl.getUniformLocation(this.program, "iCameraPosition");
     const iCameraForwardLoc = this.gl.getUniformLocation(this.program, "iCameraForward");
     const iCameraRightLoc = this.gl.getUniformLocation(this.program, "iCameraRight");
     const iCameraUpLoc = this.gl.getUniformLocation(this.program, "iCameraUp");
@@ -202,7 +201,7 @@ export class GLSLRenderer {
       this.gl.uniform1f(iTimeLoc, (now - this.startTime) / 1000.0);
       this.gl.uniform2f(iResolutionLoc, this.canvas.width, this.canvas.height);
       this.gl.uniform4f(iMouseLoc, this.mouseX, this.canvas.height - this.mouseY, this.buttonPressed ? 1.0 : 0.0, 0.0);
-      this.gl.uniform3f(iCameraPosLoc, this.camera.position[0], this.camera.position[1], this.camera.position[2]);
+      this.gl.uniform3f(iCameraPositionLoc, this.camera.position[0], this.camera.position[1], this.camera.position[2]);
       this.gl.uniform3f(iCameraForwardLoc, this.camera.forward[0], this.camera.forward[1], this.camera.forward[2]);
       this.gl.uniform3f(iCameraRightLoc, this.camera.right[0], this.camera.right[1], this.camera.right[2]);
       this.gl.uniform3f(iCameraUpLoc, this.camera.up[0], this.camera.up[1], this.camera.up[2]);

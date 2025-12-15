@@ -29,14 +29,14 @@ import type { IMergeRevertStyles } from './utils';
  */
 
 // Base colors
-const base00 = '#1e1e1ef8', // Background
-  base01 = '#252526f0', // Lighter background (popups, statuslines)
+const base00 = '#1e1e1e', // Background
+  base01 = '#252526', // Lighter background (popups, statuslines)
   base02 = '#2d2d30', // Selection background
   base03 = '#838383', // Comments, invisibles
   base04 = '#c6c6c6', // Cursor color
   base05 = '#d4d4d4', // Default foreground
   base06 = '#e9e9e9', // Light foreground
-  base07 = '#1c1c1c20', // Dark background (gutter)
+  base07 = '#1c1c1c', // Dark background (gutter)
   // Accent colors
   base08 = '#569cd6', // Keywords, storage
   base09 = '#c586c0', // Control keywords, operators
