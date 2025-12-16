@@ -1,26 +1,6 @@
 import { Camera } from "./camera";
 import { InputManager } from "./inputManager";
 
-const libCode = `
-float tanh(float x) {
-  float e1 = exp(x);
-  float e2 = exp(-x);
-  return (e1 - e2) / (e1 + e2);
-}
-
-vec2 tanh(vec2 x) {
-  return vec2(tanh(x.x), tanh(x.y));
-}
-
-vec3 tanh(vec3 x) {
-  return vec3(tanh(x.x), tanh(x.y), tanh(x.z));
-}
-
-vec4 tanh(vec4 x) {
-  return vec4(tanh(x.x), tanh(x.y), tanh(x.z), tanh(x.w));
-}
-`;
-
 export class GLSLRenderer {
   private canvas: HTMLCanvasElement;
   private errorsDiv: HTMLDivElement;
@@ -44,7 +24,7 @@ export class GLSLRenderer {
     this.statusDiv = statusDiv;
     this.inputManager = inputManager;
     this.camera = inputManager.getCamera();
-    this.gl = canvas.getContext("webgl");
+    this.gl = canvas.getContext("webgl2");
 
     if (!this.gl) {
       this.showError("WebGL not supported.");
@@ -121,14 +101,14 @@ export class GLSLRenderer {
     // Stop any existing render loop
     this.stop();
 
-    const vertexSrc = `
-      attribute vec2 position;
+    const vertexSrc = `#version 300 es
+      in vec2 position;
       void main() {
         gl_Position = vec4(position, 0.0, 1.0);
       }
     `;
 
-    const fragSrc = `
+    const fragSrc = `#version 300 es
       precision highp float;
       uniform float iTime;
       uniform vec2 iResolution;
@@ -137,10 +117,10 @@ export class GLSLRenderer {
       uniform vec3 iCameraForward;
       uniform vec3 iCameraRight;
       uniform vec3 iCameraUp;
-      ${libCode}
       ${userCode}
+      out vec4 fragColor;
       void main() {
-        mainImage(gl_FragColor, gl_FragCoord.xy);
+        mainImage(fragColor, gl_FragCoord.xy);
       }
     `;
 
