@@ -11,14 +11,14 @@ export class InputManager {
     private lookButtonDown: boolean = false;
 
     private lookButton = 0;
-    private forwardButton = 4;
-    private backwardButton = 2;
+    private forwardButton = 2;
+    private backwardButton = 4;
 
     private canvas: HTMLCanvasElement;
 
     constructor() {
         this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
-
+        
         this.canvas.addEventListener("mousedown", (e) => {
             e.preventDefault();
             const rect = this.canvas.getBoundingClientRect();

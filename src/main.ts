@@ -1,7 +1,7 @@
 import './style.css'
 
 import { EditorState } from "@codemirror/state"
-import { EditorView, highlightActiveLine, keymap } from "@codemirror/view"
+import { drawSelection, EditorView, highlightActiveLine, keymap } from "@codemirror/view"
 import { defaultKeymap, history, redo } from "@codemirror/commands"
 import { glsl } from "./glsl-lang/glsl"
 import { vsCodeDark } from './theme'
@@ -11,6 +11,8 @@ import { indentationMarkers } from './indent-markers'
 import { indentOnInput, indentUnit, syntaxTree } from "@codemirror/language"
 import { GLSLRenderer } from './renderer'
 import { InputManager } from './inputManager'
+import { linter, type Diagnostic } from '@codemirror/lint'
+import {  search, searchKeymap } from '@codemirror/search'
 
 const sampleShader = `
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -21,44 +23,66 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 const savedCode = localStorage.getItem("glsl-code") || sampleShader;
 
+const extensions = [
+  lineNumbers(),
+  keymap.of([
+    ...defaultKeymap,
+    indentWithTab,
+    { key: "Ctrl-Shift-z", run: redo },
+    ...searchKeymap
+  ]),
+  EditorState.tabSize.of(4),
+  EditorState.allowMultipleSelections.of(true),
+  indentUnit.of("    "),
+  history({}),
+  glsl(),
+  vsCodeDark,
+  highlightActiveLine(),
+  indentationMarkers(),
+  indentOnInput(),
+  drawSelection(),
+  search({
+    top: true,
+  }),
+  linter(view => {
+    const { state } = view;
+    const tree = syntaxTree(state);
+    let errors: Diagnostic[] = [];
+    tree.iterate({
+      enter: n => {
+        if (n.type.isError) {
+          errors.push({ from: n.from, to: n.to + 1, severity: 'error', message: 'syntax error' });
+        }
+      }
+    });
+    return errors;
+  }),
+  EditorView.updateListener.of(update => {
+    if (update.docChanged) {
+      localStorage.setItem("glsl-code", update.state.doc.toString());
+
+      const code = update.state.doc.toString();
+      const tree = syntaxTree(update.state);
+      let hasError = false;
+      tree.iterate({
+        enter: (node) => {
+          if (node.type.isError) {
+            hasError = true;
+            return false;
+          }
+        }
+      });
+      if (!hasError) {
+        renderer.compileAndStart(code);
+      }
+    }
+  })
+];
+
 // Create the editor state
 let editorState = EditorState.create({
   doc: savedCode,
-  extensions: [
-    lineNumbers(),
-    keymap.of([
-      ...defaultKeymap,
-      indentWithTab,
-      { key: "Ctrl-Shift-z", run: redo }
-    ]),
-    EditorState.tabSize.of(4),
-    indentUnit.of("    "),
-    history({}),
-    glsl(),
-    vsCodeDark,
-    highlightActiveLine(),
-    indentationMarkers(),
-    indentOnInput(),
-    EditorView.updateListener.of(update => {
-      if (update.docChanged) {
-        localStorage.setItem("glsl-code", update.state.doc.toString());
-
-        const code = update.state.doc.toString();
-        const tree = syntaxTree(update.state);
-        let hasError = false;
-        tree.iterate({
-          enter: (node) => {
-            if (node.type.isError) {
-              hasError = true;
-            }
-          }
-        });
-        if (!hasError) {
-          renderer.compileAndStart(code);
-        }
-      }
-    })
-  ]
+  extensions: extensions
 });
 
 const editorContainer = document.getElementById("editor-container")!;
@@ -80,7 +104,6 @@ const renderer = new GLSLRenderer(canvas, errorsDiv, statusDiv, inputManager);
 const code = view.state.doc.toString();
 renderer.compileAndStart(code);
 
-var lastKey = "";
 var editorShown = true;
 
 function showEditor(shown: boolean) {
@@ -92,21 +115,27 @@ function showEditor(shown: boolean) {
   }
 }
 
-window.addEventListener("keydown", (e) => {
+window.addEventListener("keydown", async (e) => {
   if (e.code == "AltLeft") {
+    e.preventDefault();
+  }
+  if (e.code == "KeyW" && e.altKey) {
+    showEditor(!editorShown);
+    if (editorShown) {
+      view.focus();
+    }
     e.preventDefault();
   }
   if (e.code == "KeyF" && e.altKey) {
     if (document.fullscreenElement) {
-      document.exitFullscreen();
+      await document.exitFullscreen();
       showEditor(true);
+      view.focus();
     } else {
-      canvasContainer.requestFullscreen();
-      canvas.focus();
+      await canvasContainer.requestFullscreen();
     }
     e.preventDefault();
   }
-  lastKey = e.code;
 });
 
 document.addEventListener('mousedown', e => {

@@ -45,8 +45,8 @@ const base00 = '#1e1e1e', // Background
   base0C = '#dcdcaa', // Functions, attributes
   base0D = '#b5cea8', // Numbers, constants
   base0E = '#ce9178', // Strings
-  base0F = '#f44747', // Errors, invalid
-  base10 = '#d7ba7d', // Modified elements
+  base0F = '#ff5f5fff', // Errors, invalid
+  base10 = '#fed374ff', // Modified elements
   base11 = '#6a9955'; // Comments
 
 // UI specific colors
@@ -94,6 +94,9 @@ const vsCodeDarkTheme = EditorView.theme(
     '.cm-fat-cursor': {
       backgroundColor: `${cursor}99`,
       color: background,
+    },
+    '.cm-button': {
+      backgroundImage: 'none',
     },
 
     // Selection
@@ -285,10 +288,20 @@ const vsCodeDarkTheme = EditorView.theme(
       },
     },
     '.cm-lintPoint-error': {
-      borderBottom: `2px wavy ${invalid}`,
+      backgroundImage: 'none',
+      textDecoration: `underline wavy ${invalid}`,
     },
     '.cm-lintPoint-warning': {
-      borderBottom: `2px wavy ${diagnosticWarning}`,
+      backgroundImage: 'none',
+      textDecoration: `underline wavy ${diagnosticWarning}`,
+    },
+    '.cm-lintRange-error': {
+      backgroundImage: 'none',
+      textDecoration: `underline wavy ${invalid}`,
+    },
+    '.cm-lintRange-warning': {
+      backgroundImage: 'none',
+      textDecoration: `underline wavy ${diagnosticWarning}`,
     },
 
     // Matching brackets

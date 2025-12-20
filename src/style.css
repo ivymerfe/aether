@@ -1,6 +1,5 @@
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
@@ -65,7 +64,7 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  padding-right: 1rem;
+  padding-right: 0.5rem;
 }
 
 #resizer {
@@ -101,5 +100,17 @@ body {
 }
 
 .cm-scroller {
+  outline: none;
+}
+
+.cm-search {
+  font-size: 1.5em;
+}
+
+.cm-panels-top {
+  max-width: 75%;
+}
+
+.cm-textfield:focus {
   outline: none;
 }
