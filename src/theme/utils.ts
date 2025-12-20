@@ -1,8 +1,8 @@
 // Helper module for styling options
 export const generalContent = {
-  fontSize: '14px',
+  fontSize: '16px',
   fontFamily: 'JetBrains Mono, Consolas, monospace',
-  lineHeight: '1.6',
+  lineHeight: '1.2',
 };
 
 export const generalCursor = {
@@ -22,7 +22,7 @@ export const generalGutter = {
   paddingRight: '8px',
   fontSize: '0.9em',
   fontWeight: '500',
-  lineHeight: '1.78', // Adjusted to compensate for 0.9em fontSize (1.6 / 0.9 ≈ 1.78)
+  lineHeight: '1.333', // Adjusted to compensate for 0.9em fontSize (1.2 / 0.9)
 };
 
 export const generalPanel = {

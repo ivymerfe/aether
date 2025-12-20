@@ -18,7 +18,7 @@ export class InputManager {
 
     constructor() {
         this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
-        
+
         this.canvas.addEventListener("mousedown", (e) => {
             e.preventDefault();
             const rect = this.canvas.getBoundingClientRect();
@@ -43,6 +43,9 @@ export class InputManager {
 
         this.canvas.addEventListener("mouseup", (e) => {
             e.preventDefault();
+        });
+
+        window.addEventListener("mouseup", (e) => {
             if (e.button === this.lookButton) {
                 this.lookButtonDown = false;
             } else if (e.button === this.backwardButton || e.button === this.forwardButton) {
@@ -50,12 +53,12 @@ export class InputManager {
             }
         });
 
-        this.canvas.addEventListener("mouseleave", () => {
+        window.addEventListener("mouseleave", () => {
             this.lookButtonDown = false;
             this.moveForward = 0;
         });
 
-        this.canvas.addEventListener("mousemove", (e) => {
+        window.addEventListener("mousemove", (e) => {
             if (this.lookButtonDown) {
                 this.camera.onMouse(e.movementX * -this.sensitivityX, e.movementY * -this.sensitivityY);
             }
