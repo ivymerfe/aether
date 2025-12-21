@@ -15,6 +15,13 @@ export class InputManager {
 
     private canvas: HTMLCanvasElement;
 
+    private setInputLock(value: boolean) {
+        this.inputLocked = value;
+        if (!this.inputLocked) {
+            document.exitPointerLock();
+        }
+    }
+
     constructor() {
         this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
@@ -22,7 +29,7 @@ export class InputManager {
             this.lastKey = e.code;
             if (this.inputLocked || this.keyState[e.code] || this.lookButtonDown) {
                 e.preventDefault();
-                e.stopImmediatePropagation();
+                if (!e.altKey) e.stopImmediatePropagation();
             }
             if (this.inputLocked) {
                 this.keyState[e.code] = true;
@@ -32,20 +39,28 @@ export class InputManager {
             this.keyState[e.code] = false;
             if (this.inputLocked) {
                 e.preventDefault();
-                e.stopImmediatePropagation();
+                if (!e.altKey) e.stopImmediatePropagation();
             }
             if (e.code === "AltLeft" && this.lastKey === "AltLeft") {
-                this.inputLocked = !this.inputLocked;
+                this.setInputLock(!this.inputLocked);
+            }
+        });
+        this.canvas.addEventListener("dblclick", (e) => {
+            if (e.button === this.lookButton) {
+                this.setInputLock(true);
+                e.preventDefault();
+                this.canvas.requestPointerLock();
             }
         });
         window.addEventListener("mousedown", (e) => {
             if (e.button === this.moveButton) {
-                this.inputLocked = !this.inputLocked;
+                this.lastKey = "MoveButton";
+                this.setInputLock(!this.inputLocked);
                 e.preventDefault();
                 return;
             }
             if (e.target !== this.canvas) {
-                this.inputLocked = false;
+                this.setInputLock(false);
             }
         });
         window.addEventListener("mouseup", (e) => {

@@ -119,7 +119,7 @@ window.addEventListener("keydown", async (e) => {
   if (e.code == "AltLeft") {
     e.preventDefault();
   }
-  if (e.code == "KeyW" && e.altKey) {
+  if (e.code == "KeyR" && e.altKey) {
     showEditor(!editorShown);
     if (editorShown) {
       view.focus();
