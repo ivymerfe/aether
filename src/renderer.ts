@@ -48,7 +48,8 @@ export class GLSLRenderer {
   }
 
   private updateStatus(fps: number) {
-    this.statusDiv.textContent = `${fps.toFixed(1)} FPS`;
+    const status = `${fps.toFixed(1)} FPS` + (this.inputManager.inputLocked ? " | MOVE" : "");
+    this.statusDiv.textContent = status;
   }
 
   private showError(message: string) {

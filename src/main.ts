@@ -12,7 +12,7 @@ import { indentOnInput, indentUnit, syntaxTree } from "@codemirror/language"
 import { GLSLRenderer } from './renderer'
 import { InputManager } from './inputManager'
 import { linter, type Diagnostic } from '@codemirror/lint'
-import {  search, searchKeymap } from '@codemirror/search'
+import { search, searchKeymap } from '@codemirror/search'
 
 const sampleShader = `
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -126,6 +126,11 @@ window.addEventListener("keydown", async (e) => {
     }
     e.preventDefault();
   }
+  if (e.code == "KeyQ" && e.altKey) {
+    canvasContainer.classList.toggle("canvas-aspect");
+    canvasContainer.classList.toggle("canvas-max");
+    e.preventDefault();
+  }
   if (e.code == "KeyF" && e.altKey) {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -162,6 +167,7 @@ resizeObserver.observe(canvas);
 const resizer = document.getElementById("resizer")!;
 
 resizer.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return;
   e.preventDefault();
   document.body.style.cursor = "col-resize";
   document.addEventListener("mousemove", resize);
@@ -177,7 +183,8 @@ function resize(e: MouseEvent) {
   editorContainer.style.width = `${newWidth}px`;
 }
 
-function stopResize() {
+function stopResize(e: MouseEvent) {
+  if (e.button !== 0) return;
   document.body.style.cursor = "";
   document.removeEventListener("mousemove", resize);
   document.removeEventListener("mouseup", stopResize);
