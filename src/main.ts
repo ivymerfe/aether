@@ -85,7 +85,7 @@ let editorState = EditorState.create({
   extensions: extensions
 });
 
-const editorContainer = document.getElementById("editor-container")!;
+const editorPanel = document.getElementById("editor-panel")!;
 const canvasContainer = document.getElementById("canvas-container")!;
 const editor = document.getElementById("editor")!;
 
@@ -109,9 +109,9 @@ var editorShown = true;
 function showEditor(shown: boolean) {
   editorShown = shown;
   if (editorShown) {
-    editorContainer.style.display = "";
+    editorPanel.style.display = "";
   } else {
-    editorContainer.style.display = "none";
+    editorPanel.style.display = "none";
   }
 }
 
@@ -136,6 +136,7 @@ window.addEventListener("keydown", async (e) => {
       await document.exitFullscreen();
       showEditor(true);
       view.focus();
+      inputManager.setInputLock(false);
     } else {
       await canvasContainer.requestFullscreen();
       await canvas.requestPointerLock();
@@ -146,7 +147,7 @@ window.addEventListener("keydown", async (e) => {
 });
 
 document.addEventListener('mousedown', e => {
-  if (!editorContainer.contains(e.target as Node)) {
+  if (!editorPanel.contains(e.target as Node)) {
     e.preventDefault();
   }
 });
@@ -182,7 +183,7 @@ function resize(e: MouseEvent) {
   const maxWidth = window.innerWidth - 200;
   let newWidth = e.clientX;
   newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-  editorContainer.style.width = `${newWidth}px`;
+  editorPanel.style.width = `${newWidth}px`;
 }
 
 function stopResize(e: MouseEvent) {

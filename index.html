@@ -10,10 +10,24 @@
 
 <body>
   <div id="app">
-    <div id="editor-container">
+    <div id="editor-panel">
       <div id="resizer"></div>
-      <div id="editor"></div>
-      <div id="errors"></div>
+      <div id="tab-panel">
+        <button id="show-tree-button">Sh</button>
+        <div id="tabs">
+          <div class="tab active" data-tab="vertex">Vertex Shader</div>
+          <div class="tab" data-tab="fragment">Fragment Shader</div>
+        </div>
+      </div>
+      <div id="editor-container">
+        <div id="tree-view">
+          <label>Shaders</label>
+        </div>
+        <div id="editor-errors">
+          <div id="editor"></div>
+          <div id="errors"></div>
+        </div>
+      </div>
     </div>
     <div id="shader-view">
       <div id="canvas-container" class="canvas-aspect">
