@@ -138,6 +138,8 @@ window.addEventListener("keydown", async (e) => {
       view.focus();
     } else {
       await canvasContainer.requestFullscreen();
+      await canvas.requestPointerLock();
+      inputManager.setInputLock(true);
     }
     e.preventDefault();
   }

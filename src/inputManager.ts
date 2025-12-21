@@ -15,7 +15,7 @@ export class InputManager {
 
     private canvas: HTMLCanvasElement;
 
-    private setInputLock(value: boolean) {
+    public setInputLock(value: boolean) {
         this.inputLocked = value;
         if (!this.inputLocked) {
             document.exitPointerLock();
