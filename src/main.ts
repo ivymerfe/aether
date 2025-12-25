@@ -1,153 +1,74 @@
 import './style.css'
 
-import { EditorState } from "@codemirror/state"
-import { drawSelection, EditorView, highlightActiveLine, keymap } from "@codemirror/view"
-import { defaultKeymap, history, redo } from "@codemirror/commands"
-import { glsl } from "./glsl-lang/glsl"
-import { vsCodeDark } from './theme'
-import { lineNumbers } from "@codemirror/view"
-import { indentWithTab } from "@codemirror/commands"
-import { indentationMarkers } from './indent-markers'
-import { indentOnInput, indentUnit, syntaxTree } from "@codemirror/language"
+import { StateManager } from './stateManager'
 import { GLSLRenderer } from './renderer'
 import { InputManager } from './inputManager'
-import { linter, type Diagnostic } from '@codemirror/lint'
-import { search, searchKeymap } from '@codemirror/search'
+import { Editor } from './editor'
 
-const sampleShader = `
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 uv = (fragCoord * 2.0 - iResolution) / iResolution.y;
-  fragColor = vec4(uv, 0.5, 1.0);
-}
-`;
-
-const savedCode = localStorage.getItem("glsl-code") || sampleShader;
-
-const extensions = [
-  lineNumbers(),
-  keymap.of([
-    ...defaultKeymap,
-    indentWithTab,
-    { key: "Ctrl-Shift-z", run: redo },
-    ...searchKeymap
-  ]),
-  EditorState.tabSize.of(4),
-  EditorState.allowMultipleSelections.of(true),
-  indentUnit.of("    "),
-  history({}),
-  glsl(),
-  vsCodeDark,
-  highlightActiveLine(),
-  indentationMarkers(),
-  indentOnInput(),
-  drawSelection(),
-  search({
-    top: true,
-  }),
-  linter(view => {
-    const { state } = view;
-    const tree = syntaxTree(state);
-    let errors: Diagnostic[] = [];
-    tree.iterate({
-      enter: n => {
-        if (n.type.isError) {
-          errors.push({ from: n.from, to: n.to + 1, severity: 'error', message: 'syntax error' });
-        }
-      }
-    });
-    return errors;
-  }),
-  EditorView.updateListener.of(update => {
-    if (update.docChanged) {
-      localStorage.setItem("glsl-code", update.state.doc.toString());
-
-      const code = update.state.doc.toString();
-      const tree = syntaxTree(update.state);
-      let hasError = false;
-      tree.iterate({
-        enter: (node) => {
-          if (node.type.isError) {
-            hasError = true;
-            return false;
-          }
-        }
-      });
-      if (!hasError) {
-        renderer.compileAndStart(code);
-      }
-    }
-  })
-];
-
-// Create the editor state
-let editorState = EditorState.create({
-  doc: savedCode,
-  extensions: extensions
-});
+const stateManager = new StateManager();
+const inputManager = new InputManager();
 
 const editorPanel = document.getElementById("editor-panel")!;
+const editorDiv = document.getElementById("editor")!;
+const tabsDiv = document.getElementById("tabs-container")!;
+const treeViewDiv = document.getElementById("tree-view")!;
+const errorsDiv = document.getElementById("errors")! as HTMLDivElement;
+const statusDiv = document.getElementById("status")! as HTMLDivElement;
 const canvasContainer = document.getElementById("canvas-container")!;
-const editor = document.getElementById("editor")!;
-
-const view = new EditorView({
-  state: editorState,
-  parent: editor
-});
-
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const errorsDiv = document.getElementById("errors") as HTMLDivElement;
-const statusDiv = document.getElementById("status") as HTMLDivElement;
+const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
-const inputManager = new InputManager();
 const renderer = new GLSLRenderer(canvas, errorsDiv, statusDiv, inputManager);
+const editor = new Editor(editorDiv, tabsDiv, treeViewDiv, stateManager, renderer);
 
-const code = view.state.doc.toString();
-renderer.compileAndStart(code);
+function updateSidebarVisibility() {
+    const isOpen = stateManager.isSidebarOpen;
+    if (isOpen) {
+        treeViewDiv.classList.add('visible');
+        sidebarToggle.textContent = '◀';
+    } else {
+        treeViewDiv.classList.remove('visible');
+        sidebarToggle.textContent = '▶';
+    }
+}
+
+sidebarToggle.onclick = () => {
+    stateManager.setSidebarOpen(!stateManager.isSidebarOpen);
+    updateSidebarVisibility();
+};
+updateSidebarVisibility();
 
 var editorShown = true;
-
 function showEditor(shown: boolean) {
   editorShown = shown;
-  if (editorShown) {
-    editorPanel.style.display = "";
-  } else {
-    editorPanel.style.display = "none";
-  }
+  editorPanel.style.display = editorShown ? "" : "none";
 }
 
 window.addEventListener("keydown", async (e) => {
-  if (e.code == "AltLeft") {
-    e.preventDefault();
-  }
+  if (e.code == "AltLeft") e.preventDefault();
+  
   if (e.code == "KeyR" && e.altKey) {
     showEditor(!editorShown);
-    if (editorShown) {
-      view.focus();
-    }
     e.preventDefault();
   }
+  
   if (e.code == "KeyQ" && e.altKey) {
     canvasContainer.classList.toggle("canvas-aspect");
     canvasContainer.classList.toggle("canvas-max");
+    resizeCanvas();
     e.preventDefault();
   }
+  
   if (e.code == "KeyF" && e.altKey) {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
       showEditor(true);
-      view.focus();
       inputManager.setInputLock(false);
     } else {
       await canvasContainer.requestFullscreen();
       await canvas.requestPointerLock();
       inputManager.setInputLock(true);
     }
-    e.preventDefault();
-  }
-});
-
-document.addEventListener('mousedown', e => {
-  if (!editorPanel.contains(e.target as Node)) {
     e.preventDefault();
   }
 });
@@ -186,8 +107,7 @@ function resize(e: MouseEvent) {
   editorPanel.style.width = `${newWidth}px`;
 }
 
-function stopResize(e: MouseEvent) {
-  if (e.button !== 0) return;
+function stopResize() {
   document.body.style.cursor = "";
   document.removeEventListener("mousemove", resize);
   document.removeEventListener("mouseup", stopResize);
