@@ -1,12 +1,21 @@
 import type { App } from './app';
 import type { Editor } from './editor';
 
+interface FileGroup {
+  container: HTMLDivElement;
+  button: HTMLSpanElement;
+  header: HTMLDivElement;
+  files: Map<string, HTMLDivElement>;
+}
+
 export class FileTreeView {
   private container: HTMLElement;
   private fileContainer: HTMLElement;
   private app: App;
   private editor: Editor;
   private newFileInput: HTMLInputElement;
+  private cachedGroups: Map<string, FileGroup> = new Map();
+  private lastActiveTab: string | null = null;
 
   constructor(container: HTMLElement, app: App, editor: Editor) {
     this.container = container;
@@ -14,7 +23,10 @@ export class FileTreeView {
     this.editor = editor;
 
     this.newFileInput = this.createNewFileInput();
-    this.container.appendChild(this.newFileInput);
+    const div = document.createElement('div');
+    div.className = 'tree-element';
+    div.appendChild(this.newFileInput)
+    this.container.appendChild(div);
 
     this.fileContainer = document.createElement('div');
     this.fileContainer.tabIndex = 0;
@@ -56,31 +68,47 @@ export class FileTreeView {
     return input;
   }
 
-  private createGroupContainer(group: string, expanded: boolean): HTMLDivElement {
-    const groupContainer = document.createElement('div');
-    groupContainer.className = 'tree-group ' + (expanded ? 'expanded' : '');
+  private createFileGroup(group: string): FileGroup {
+    const container = document.createElement('div');
+    container.className = 'tree-group';
 
-    const groupButton = document.createElement('span');
-    groupButton.className = 'tree-group-button';
-    groupButton.textContent = expanded ? '-' : '+';
-    groupButton.onclick = () => {
-      const isExpanded = groupContainer.classList.contains('expanded');
-      groupContainer.classList.toggle('expanded');
-      groupButton.textContent = isExpanded ? '+' : '-';
+    const button = document.createElement('span');
+    button.className = 'tree-button tree-group-button';
+    button.onclick = (e) => {
+      e.stopPropagation();
+      const isExpanded = container.classList.contains('expanded');
+      container.classList.toggle('expanded');
+      button.textContent = isExpanded ? '+' : '-';
       this.app.toggleGroup(group);
     };
-    groupContainer.appendChild(groupButton);
+    container.appendChild(button);
 
-    return groupContainer;
-  }
+    const header = document.createElement('div');
+    header.className = 'tree-element';
+    header.tabIndex = 0;
 
-  private createGroupHeader(group: string): HTMLInputElement {
     const groupInput = document.createElement('input');
     groupInput.setAttribute('readonly', 'true');
+    groupInput.setAttribute('spellcheck', 'false');
     groupInput.className = 'tree-input tree-group-header';
     groupInput.value = group;
 
-    groupInput.ondblclick = () => groupInput.removeAttribute('readonly');
+    header.onclick = () => {
+      const isExpanded = container.classList.contains('expanded');
+      container.classList.toggle('expanded');
+      button.textContent = isExpanded ? '+' : '-';
+      this.app.toggleGroup(group);
+    };
+    header.ondblclick = () => {
+      groupInput.removeAttribute('readonly');
+      groupInput.focus();
+    }
+    header.onkeydown = (e) => {
+      if (e.code === 'KeyW' && e.altKey) {
+        groupInput.removeAttribute('readonly');
+        groupInput.focus();
+      }
+    };
     groupInput.onkeydown = (e) => {
       if (e.key === 'Enter') {
         const newGroup = groupInput.value.trim();
@@ -98,21 +126,44 @@ export class FileTreeView {
       groupInput.setAttribute('readonly', 'true');
       groupInput.value = group;
     };
-    return groupInput
+    header.appendChild(groupInput);
+    container.appendChild(header);
+
+    return {
+      container,
+      button,
+      header,
+      files: new Map()
+    };
   }
 
-  private createFileInput(filePath: string, activeTab: string | null): HTMLInputElement {
+  private createFileElement(filePath: string): HTMLDivElement {
+    const div = document.createElement('div');
+    div.className = 'tree-element';
+    div.tabIndex = 0;
+
     const fileName = filePath.split('.').slice(1).join('.');
 
     const fileInput = document.createElement('input');
     fileInput.setAttribute('readonly', 'true');
-    fileInput.className = 'tree-input tree-file ' + (filePath === activeTab ? 'active' : '');
+    fileInput.setAttribute('spellcheck', 'false');
+    fileInput.className = 'tree-input tree-file';
     fileInput.value = fileName;
 
-    fileInput.onclick = () => this.editor.openTab(filePath);
-    fileInput.ondblclick = () => {
+    div.onclick = () => {
+      this.editor.openTab(filePath);
+    }
+    div.ondblclick = () => {
       fileInput.removeAttribute('readonly');
       fileInput.value = filePath;
+      fileInput.focus();
+    }
+    div.onkeydown = (e) => {
+      if (e.code === 'KeyW' && e.altKey) {
+        fileInput.removeAttribute('readonly');
+        fileInput.value = filePath;
+        fileInput.focus();
+      }
     };
     fileInput.onkeydown = (e) => {
       if (e.key === 'Enter') {
@@ -131,33 +182,81 @@ export class FileTreeView {
       fileInput.setAttribute('readonly', 'true');
       fileInput.value = fileName;
     }
-    return fileInput;
+    const loadButton = document.createElement('span');
+    loadButton.className = 'tree-button tree-load-button';
+    loadButton.textContent = '>';
+    loadButton.onclick = (e) => {
+      e.stopPropagation();
+      this.app.loadFile(filePath);
+    }
+
+    div.appendChild(fileInput);
+    div.appendChild(loadButton);
+    return div;
+  }
+
+  updateActiveTab() {
+    const activeTab = this.app.activeTab;
+    if (activeTab === this.lastActiveTab) return;
+
+    if (this.lastActiveTab) {
+      const prevGroup = this.lastActiveTab.split('.')[0];
+      const prevCachedGroup = this.cachedGroups.get(prevGroup);
+      const prevFileInput = prevCachedGroup?.files.get(this.lastActiveTab);
+      prevFileInput?.classList.remove('active');
+    }
+    if (activeTab) {
+      const group = activeTab.split('.')[0];
+      const cachedGroup = this.cachedGroups.get(group);
+      const fileInput = cachedGroup?.files.get(activeTab);
+      fileInput?.classList.add('active');
+    }
+
+    this.lastActiveTab = activeTab;
   }
 
   render() {
-    this.fileContainer.innerHTML = '';
     const files = this.app.listFiles().sort();
-    const activeTab = this.app.activeTab;
-    let currentContainer: HTMLDivElement | null = null;
-    let lastGroup = null;
-
+    const fileGroups = new Map<string, string[]>();
     for (const filePath of files) {
       const group = filePath.split('.')[0];
-      if (group !== lastGroup) {
-        lastGroup = group;
-        if (currentContainer) {
-          this.fileContainer.appendChild(currentContainer);
-        }
-        const expanded = this.app.isGroupExpanded(group);
-        currentContainer = this.createGroupContainer(group, expanded);
-        const groupDiv = this.createGroupHeader(group);
-        currentContainer.appendChild(groupDiv);
+      if (!fileGroups.has(group)) {
+        fileGroups.set(group, []);
       }
-      const fileDiv = this.createFileInput(filePath, activeTab);
-      currentContainer!.appendChild(fileDiv);
+      fileGroups.get(group)!.push(filePath);
     }
-    if (currentContainer) {
-      this.fileContainer.appendChild(currentContainer);
+    for (const [group, cachedGroup] of this.cachedGroups) {
+      if (!fileGroups.has(group)) {
+        cachedGroup.container.remove();
+        this.cachedGroups.delete(group);
+      }
     }
+    for (const [group, groupFiles] of fileGroups) {
+      let cachedGroup = this.cachedGroups.get(group);
+
+      if (!cachedGroup) {
+        cachedGroup = this.createFileGroup(group);
+        this.cachedGroups.set(group, cachedGroup);
+        this.fileContainer.appendChild(cachedGroup.container);
+      }
+      const expanded = this.app.isGroupExpanded(group);
+      cachedGroup.container.className = `tree-group ${expanded ? 'expanded' : ''}`;
+      cachedGroup.button.textContent = expanded ? '-' : '+';
+      for (const [filePath, fileInput] of cachedGroup.files) {
+        if (!groupFiles.includes(filePath)) {
+          fileInput.remove();
+          cachedGroup.files.delete(filePath);
+        }
+      }
+      for (const filePath of groupFiles) {
+        let fileInput = cachedGroup.files.get(filePath);
+        if (!fileInput) {
+          fileInput = this.createFileElement(filePath);
+          cachedGroup.files.set(filePath, fileInput);
+          cachedGroup.container.appendChild(fileInput);
+        }
+      }
+    }
+    this.updateActiveTab();
   }
 }

@@ -12,6 +12,7 @@
   justify-content: center;
   user-select: none;
   cursor: pointer;
+  font-size: large;
   color: var(--text-muted);
   background-color: var(--bg-panel);
   outline: none;
@@ -45,7 +46,6 @@
   user-select: none;
   cursor: pointer;
 
-  font-size: 13px;
   color: var(--text-muted);
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border-color);

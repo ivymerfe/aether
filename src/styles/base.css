@@ -1,6 +1,7 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Consolas', monospace;
   font-weight: 400;
+  font-size: 15px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -11,8 +12,14 @@
   --bg-panel-hover: #202020;
   --bg-active: #1e1e1e;
   --border-color: #444;
-  --text-muted: #888;
+  --text-muted: #aaa;
   --accent-color: #007acc;
+}
+
+input {
+  font-family: 'Consolas', monospace;
+  font-weight: 400;
+  font-size: 15px;
 }
 
 * {

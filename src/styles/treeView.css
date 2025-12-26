@@ -9,7 +9,6 @@
   border-right: 1px solid var(--border-color);
   overflow-y: auto;
   display: none;
-  outline: none;
   padding-top: 0.5rem;
 }
 
@@ -23,59 +22,84 @@
   overflow: hidden;
   user-select: none;
 }
+
 .tree-group.expanded {
   max-height: none;
 }
 
-.tree-group-button {
+.tree-button {
   position: absolute;
   user-select: none;
+  text-align: center;
   cursor: pointer;
   z-index: 1;
-  right: 0;
-  top: 0;
-  font-family: monospace;
-  width: 1.5rem;
+  color: #bbb;
+  font-size: large;
+  width: var(--tree-element-height);
   height: var(--tree-element-height);
   line-height: var(--tree-element-height);
-  font-size: 1.3rem;
+}
+
+.tree-group-button {
+  left: 0rem;
+  top: 0;
+}
+
+.tree-load-button {
+  right: 0.5rem;
+  top: 0;
 }
 
 .tree-input {
   padding: 0 0.25rem;
   height: var(--tree-element-height);
+  line-height: var(--tree-element-height);
   box-sizing: border-box;
-  font-size: medium;
+  font-size: large;
   width: 100%;
-  margin:0;
+  margin: 0;
   background: none;
   border: none;
   outline: none;
   overflow: hidden;
   cursor: default;
-}
-
-.tree-input:hover {
-  background-color: #303030;
+  pointer-events: none;
+  color: #eee;
 }
 
 .tree-input:focus {
-  background-color: #252525;
+  pointer-events: all;
+  color: #fff;
 }
 
 .tree-input:read-write {
+  pointer-events: all;
   cursor: text;
+  background-color: #252525;
+  border: 1px solid var(--border-color);
 }
 
 .tree-group-header {
-  padding-left: 0.75rem;
+  padding-left: 1.5rem;
 }
 
 .tree-file {
-  padding-left: 1.75rem;
+  padding-left: 2rem;
 }
 
-.tree-file.active {
+.tree-element {
+  position: relative;
+}
+
+.tree-element:hover {
+  background-color: #303030;
+}
+
+.tree-element.active {
+  background-color: #252525;
+}
+
+.tree-element:focus {
   background-color: #252525;
 }
 
