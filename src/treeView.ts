@@ -16,46 +16,10 @@ export class FileTreeView {
     this.newFileInput = this.createNewFileInput();
     this.container.appendChild(this.newFileInput);
 
-    this.fileContainer = this.createFileContainer();
+    this.fileContainer = document.createElement('div');
+    this.fileContainer.tabIndex = 0;
     this.container.appendChild(this.fileContainer);
 
-    this.attachContainerEvents();
-    this.render();
-  }
-
-  private createNewFileInput(): HTMLInputElement {
-    const input = document.createElement('input');
-    input.className = 'tree-input tree-new-file';
-    input.onkeydown = (e) => this.handleNewFileInputKeydown(e, input);
-    input.onblur = () => this.handleNewFileInputBlur(input);
-    return input;
-  }
-
-  private handleNewFileInputKeydown(e: KeyboardEvent, input: HTMLInputElement) {
-    if (e.key === 'Enter') {
-      const fileName = input.value.trim();
-      if (fileName.length > 0 && !this.app.exists(fileName)) {
-        this.app.write(fileName, '', false);
-        this.render();
-      }
-      input.blur();
-    } else if (e.key === 'Escape') {
-      input.blur();
-    }
-  }
-
-  private handleNewFileInputBlur(input: HTMLInputElement) {
-    input.classList.remove('visible');
-    input.value = '';
-  }
-
-  private createFileContainer(): HTMLDivElement {
-    const div = document.createElement('div');
-    div.tabIndex = 0;
-    return div;
-  }
-
-  private attachContainerEvents() {
     this.container.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         if (this.app.activeTab) {
@@ -67,6 +31,29 @@ export class FileTreeView {
         e.preventDefault();
       }
     });
+    this.render();
+  }
+
+  private createNewFileInput(): HTMLInputElement {
+    const input = document.createElement('input');
+    input.className = 'tree-input tree-new-file';
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        const fileName = input.value.trim();
+        if (fileName.length > 0 && !this.app.exists(fileName)) {
+          this.app.write(fileName, '', false);
+          this.render();
+        }
+        input.blur();
+      } else if (e.key === 'Escape') {
+        input.blur();
+      }
+    }
+    input.onblur = () => {
+      input.classList.remove('visible');
+      input.value = '';
+    };
+    return input;
   }
 
   private createGroupContainer(group: string, expanded: boolean): HTMLDivElement {
@@ -87,42 +74,64 @@ export class FileTreeView {
     return groupContainer;
   }
 
-  private createFileDiv(filePath: string, activeTab: string | null): HTMLDivElement {
-    const fileDiv = document.createElement('div');
-    fileDiv.className = `tree-file ${activeTab === filePath ? 'active' : ''}`;
+  private createGroupHeader(group: string): HTMLInputElement {
+    const groupInput = document.createElement('input');
+    groupInput.setAttribute('readonly', 'true');
+    groupInput.className = 'tree-input tree-group-header';
+    groupInput.value = group;
 
-    const fileLabel = document.createElement('input');
-    fileLabel.setAttribute('readonly', 'true');
-    fileLabel.className = 'tree-input';
-    fileLabel.value = filePath;
-
-    fileDiv.onclick = () => this.editor.openTab(filePath);
-    fileLabel.ondblclick = () => fileLabel.removeAttribute('readonly');
-    fileLabel.onkeydown = (e) => this.handleFileLabelKeydown(e, fileLabel, filePath);
-    fileLabel.onblur = () => this.handleFileLabelBlur(fileLabel, filePath);
-
-    fileDiv.appendChild(fileLabel);
-    return fileDiv;
-  }
-
-  private handleFileLabelKeydown(e: KeyboardEvent, fileLabel: HTMLInputElement, filePath: string) {
-    if (e.key === 'Enter') {
-      const newPath = fileLabel.value.trim();
-      if (newPath.length > 0 && newPath !== filePath && !this.app.exists(newPath)) {
-        this.editor.closeTab(filePath);
-        this.app.renameFile(filePath, newPath);
-        this.editor.openTab(newPath);
-        this.render();
+    groupInput.ondblclick = () => groupInput.removeAttribute('readonly');
+    groupInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        const newGroup = groupInput.value.trim();
+        if (newGroup.length > 0 && newGroup !== group && !this.app.exists(newGroup)) {
+          this.app.renameGroup(group, newGroup);
+          this.editor.reload();
+          this.render();
+        }
+        groupInput.blur();
+      } else if (e.key === 'Escape') {
+        groupInput.blur();
       }
-      fileLabel.blur();
-    } else if (e.key === 'Escape') {
-      fileLabel.blur();
     }
+    groupInput.onblur = () => {
+      groupInput.setAttribute('readonly', 'true');
+      groupInput.value = group;
+    };
+    return groupInput
   }
 
-  private handleFileLabelBlur(fileLabel: HTMLInputElement, filePath: string) {
-    fileLabel.setAttribute('readonly', 'true');
-    fileLabel.value = filePath;
+  private createFileInput(filePath: string, activeTab: string | null): HTMLInputElement {
+    const fileName = filePath.split('.').slice(1).join('.');
+
+    const fileInput = document.createElement('input');
+    fileInput.setAttribute('readonly', 'true');
+    fileInput.className = 'tree-input tree-file ' + (filePath === activeTab ? 'active' : '');
+    fileInput.value = fileName;
+
+    fileInput.onclick = () => this.editor.openTab(filePath);
+    fileInput.ondblclick = () => {
+      fileInput.removeAttribute('readonly');
+      fileInput.value = filePath;
+    };
+    fileInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        const newPath = fileInput.value.trim();
+        if (newPath.length > 0 && newPath !== filePath && !this.app.exists(newPath)) {
+          this.app.renameFile(filePath, newPath);
+          this.editor.reload();
+          this.render();
+        }
+        fileInput.blur();
+      } else if (e.key === 'Escape') {
+        fileInput.blur();
+      }
+    }
+    fileInput.onblur = () => {
+      fileInput.setAttribute('readonly', 'true');
+      fileInput.value = fileName;
+    }
+    return fileInput;
   }
 
   render() {
@@ -141,8 +150,10 @@ export class FileTreeView {
         }
         const expanded = this.app.isGroupExpanded(group);
         currentContainer = this.createGroupContainer(group, expanded);
+        const groupDiv = this.createGroupHeader(group);
+        currentContainer.appendChild(groupDiv);
       }
-      const fileDiv = this.createFileDiv(filePath, activeTab);
+      const fileDiv = this.createFileInput(filePath, activeTab);
       currentContainer!.appendChild(fileDiv);
     }
     if (currentContainer) {

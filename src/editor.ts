@@ -88,7 +88,10 @@ export class Editor {
     this.extensions = [...EXTENSIONS, updateListener];
 
     this.treeView = new FileTreeView(treeContainer, app, this);
+    this.reload();
+  }
 
+  reload() {
     this.renderTabs();
     const active = this.app.activeTab;
     if (active) {

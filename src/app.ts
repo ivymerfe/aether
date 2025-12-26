@@ -36,7 +36,7 @@ export class App {
 
     const raw = localStorage.getItem(App.STORAGE_KEY);
     if (raw) {
-      this.state = { ...DEFAULT_STATE, ...JSON.parse(raw) as AppState};
+      this.state = { ...DEFAULT_STATE, ...JSON.parse(raw) as AppState };
     } else {
       this.state = DEFAULT_STATE;
     }
@@ -82,8 +82,35 @@ export class App {
     if (content !== undefined) {
       this.state.files[newPath] = content;
       delete this.state.files[oldPath];
+
+      this.closeTab(oldPath);
+      this.openTab(newPath);
+
       this.save();
     }
+  }
+
+  renameGroup(oldGroup: string, newGroup: string) {
+    const files = Object.keys(this.state.files);
+    for (const file of files) {
+      if (file.startsWith(oldGroup + '.')) {
+        const newFile = newGroup + file.slice(oldGroup.length);
+        this.state.files[newFile] = this.state.files[file];
+        delete this.state.files[file];
+
+        this.closeTab(file);
+        this.openTab(newFile);
+      }
+    }
+    const wasExpanded = this.isGroupExpanded(oldGroup);
+    const idx = this.state.expandedGroups.indexOf(oldGroup);
+    if (idx !== -1) {
+      this.state.expandedGroups.splice(idx, 1);
+    }
+    if (wasExpanded) {
+      this.state.expandedGroups.push(newGroup);
+    }
+    this.save();
   }
 
   loadFile(file: string) {

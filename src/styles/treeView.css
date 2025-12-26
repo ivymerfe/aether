@@ -1,3 +1,7 @@
+:root {
+  --tree-element-height: 1.75rem;
+}
+
 #tree-view {
   flex: 0.4;
   height: 100%;
@@ -6,6 +10,7 @@
   overflow-y: auto;
   display: none;
   outline: none;
+  padding-top: 0.5rem;
 }
 
 #tree-view.visible {
@@ -14,7 +19,7 @@
 
 .tree-group {
   position: relative;
-  max-height: 2rem;
+  max-height: var(--tree-element-height);
   overflow: hidden;
   user-select: none;
 }
@@ -31,18 +36,14 @@
   top: 0;
   font-family: monospace;
   width: 1.5rem;
-  height: 2rem;
-  line-height: 2rem;
+  height: var(--tree-element-height);
+  line-height: var(--tree-element-height);
   font-size: 1.3rem;
 }
 
-.tree-file.active {
-  background-color: #252525;
-}
-
 .tree-input {
-  padding: 0 0.5rem;
-  height: 2rem;
+  padding: 0 0.25rem;
+  height: var(--tree-element-height);
   box-sizing: border-box;
   font-size: medium;
   min-width: 0;
@@ -65,6 +66,18 @@
 
 .tree-input:read-write {
   cursor: text;
+}
+
+.tree-group-header {
+  padding-left: 0.75rem;
+}
+
+.tree-file {
+  padding-left: 1.75rem;
+}
+
+.tree-file.active {
+  background-color: #252525;
 }
 
 .tree-new-file {
