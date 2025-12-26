@@ -1,0 +1,42 @@
+#editor-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+#editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--bg-active);
+}
+
+#editor {
+  flex: 1;
+  overflow: hidden;
+}
+
+#errors {
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: #2d1a1a;
+  color: #ff8888;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  border-top: 1px solid #522;
+  display: none;
+}
+
+#errors.visible {
+  display: block;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-scroller {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}

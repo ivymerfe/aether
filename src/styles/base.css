@@ -1,0 +1,54 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #1a1a1a;
+
+  --bg-dark: #1a1a1a;
+  --bg-panel: #121212;
+  --bg-panel-hover: #202020;
+  --bg-active: #1e1e1e;
+  --border-color: #444;
+  --text-muted: #888;
+  --accent-color: #007acc;
+}
+
+body {
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  width: 100vw;
+}
+
+#editor-panel {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
+  margin-right: 0.5em;
+}
+
+#shader-view {
+  flex: 1;
+  position: relative;
+}
+
+#resizer {
+  position: absolute;
+  z-index: 100;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+}

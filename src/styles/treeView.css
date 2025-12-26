@@ -1,0 +1,69 @@
+#tree-view {
+  width: 200px;
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  font-size: 13px;
+  padding-top: 5px;
+  display: none;
+}
+
+#tree-view.visible {
+  display: block;
+}
+
+.tree-item {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #ccc;
+  user-select: none;
+}
+
+.tree-item:hover {
+  background-color: var(--bg-panel-hover);
+  color: #fff;
+}
+
+.tree-item.active {
+  background-color: #37373d;
+  color: #fff;
+}
+
+.tree-arrow {
+  display: inline-block;
+  text-align: center;
+  margin-right: 0.5em;
+  font-size: small;
+  transition: transform 0.1s;
+  color: var(--text-muted);
+}
+
+.tree-arrow:hover {
+  color: #fff;
+}
+
+.tree-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-arrow.hidden {
+  visibility: hidden;
+}
+
+.tree-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-children {
+  display: none;
+}
+
+.tree-children.expanded {
+  display: block;
+}
+
+.tree-file {
+  padding-left: 2em;
+}

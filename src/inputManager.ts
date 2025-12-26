@@ -1,19 +1,22 @@
 import { Camera } from "./camera";
 
 export class InputManager {
+  private canvas: HTMLCanvasElement;
   private camera: Camera = new Camera();
-  private sensitivityX: number = 0.008;
-  private sensitivityY: number = 0.004;
 
+  private sensitivityX: number = 0.006;
+  private sensitivityY: number = 0.004;
   private lookButton = 0;
   private moveButton = 2;
 
-  private lookButtonDown: boolean = false;
+  public lookButtonDown: boolean = false;
   public inputLocked = false;
-  private keyState: { [key: string]: boolean } = {};
-  private lastKey: string = "";
+  public keyState: { [key: string]: boolean } = {};
+  public lastKey: string = "";
 
-  private canvas: HTMLCanvasElement;
+  public mouseX: number = 0;
+  public mouseY: number = 0
+  public canvasMouseDown: boolean = false;
 
   public setInputLock(value: boolean) {
     this.inputLocked = value;
@@ -52,6 +55,23 @@ export class InputManager {
         this.canvas.requestPointerLock();
       }
     });
+    this.canvas.addEventListener("mousedown", (e) => {
+      if (e.button === this.lookButton) {
+        this.lookButtonDown = true;
+        this.canvasMouseDown = true;
+        e.preventDefault();
+      }
+    });
+    this.canvas.addEventListener("mouseup", (e) => {
+      if (e.button === this.lookButton) {
+        this.canvasMouseDown = false;
+      }
+    });
+    this.canvas.addEventListener("mousemove", (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this.mouseX = e.clientX - rect.left;
+      this.mouseY = rect.bottom - e.clientY;
+    });
     window.addEventListener("mousedown", (e) => {
       if (e.button === this.moveButton) {
         this.lastKey = "MoveButton";
@@ -69,23 +89,19 @@ export class InputManager {
         e.preventDefault();
       }
     });
-    this.canvas.addEventListener("mousedown", (e) => {
-      if (e.button === this.lookButton) {
-        this.lookButtonDown = true;
-        e.preventDefault();
-      }
-    });
     window.addEventListener("mousemove", (e) => {
       if (this.lookButtonDown || this.inputLocked) {
         this.camera.onMouse(e.movementX * -this.sensitivityX, e.movementY * -this.sensitivityY);
       }
     });
+    window.addEventListener("wheel", (e) => {
+      if (this.inputLocked) {
+        e.preventDefault();
+        this.camera.onScroll(e.deltaY);
+      }
+    });
     window.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-    });
-    this.canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      this.camera.onScroll(e.deltaY);
     });
   }
 

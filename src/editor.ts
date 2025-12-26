@@ -1,4 +1,4 @@
-import { EditorState } from "@codemirror/state"
+import { EditorState, type Extension } from "@codemirror/state"
 import { drawSelection, EditorView, highlightActiveLine, keymap } from "@codemirror/view"
 import { defaultKeymap, history, redo } from "@codemirror/commands"
 import { glsl } from "./glsl-lang/glsl"
@@ -7,11 +7,11 @@ import { lineNumbers } from "@codemirror/view"
 import { indentWithTab } from "@codemirror/commands"
 import { indentationMarkers } from './indent-markers'
 import { indentOnInput, indentUnit, syntaxTree } from "@codemirror/language"
-import { GLSLRenderer } from './renderer'
 import { linter, type Diagnostic } from '@codemirror/lint'
 import { search, searchKeymap } from '@codemirror/search'
+
 import { FileTreeView } from './treeView'
-import { StateManager } from './stateManager'
+import { App } from './app'
 
 const EXTENSIONS = [
   lineNumbers(),
@@ -47,23 +47,19 @@ const EXTENSIONS = [
   })
 ];
 
+const EMPTY_STATE = EditorState.create({ doc: "", extensions: EXTENSIONS });
+
 export class Editor {
   private view: EditorView;
-  private stateManager: StateManager;
+  private app: App;
   private tabsContainer: HTMLElement;
   private treeView: FileTreeView;
-  private renderer: GLSLRenderer;
+  private extensions: Extension[];
+  private loadedFiles: Record<string, EditorState> = {};
 
-  constructor(
-    editorContainer: HTMLElement,
-    tabsContainer: HTMLElement,
-    treeContainer: HTMLElement,
-    stateManager: StateManager,
-    renderer: GLSLRenderer
-  ) {
-    this.stateManager = stateManager;
+  constructor(editorContainer: HTMLElement, tabsContainer: HTMLElement, treeContainer: HTMLElement, app: App) {
+    this.app = app;
     this.tabsContainer = tabsContainer;
-    this.renderer = renderer;
 
     this.view = new EditorView({
       parent: editorContainer
@@ -71,84 +67,80 @@ export class Editor {
 
     const updateListener = EditorView.updateListener.of(update => {
       if (update.docChanged) {
-        const active = this.stateManager.activeTab;
+        const active = this.app.activeTab;
         if (active) {
           const content = update.state.doc.toString();
-          this.stateManager.writeFile(active, content);
-          this.checkAndCompile(update.state, content);
+          const tree = syntaxTree(update.state);
+          let hasError = false;
+          tree.iterate({
+            enter: (node) => {
+              if (node.type.isError) {
+                hasError = true;
+                return false;
+              }
+            }
+          });
+          this.app.write(active, content, hasError);
+          this.loadedFiles[active] = update.state;
         }
       }
     });
+    this.extensions = [...EXTENSIONS, updateListener];
 
-    // Reconfigure extensions to include the listener
-    // this.view.dispatch({
-    //   effects: EditorState.appendExtension.of(updateListener)
-    // });
-
-    // Initialize Tree View
-    this.treeView = new FileTreeView(treeContainer, stateManager, (path) => {
-      this.openFile(path);
+    this.treeView = new FileTreeView(treeContainer, app, (path) => {
+      this.openTab(path);
     });
 
-    // Initial Load
     this.renderTabs();
-    const active = this.stateManager.activeTab;
+    const active = this.app.activeTab;
     if (active) {
-      this.loadFileIntoEditor(active);
+      this.loadFile(active);
     }
   }
 
-  private checkAndCompile(state: EditorState, content: string) {
-    const tree = syntaxTree(state);
-    let hasError = false;
-    tree.iterate({
-      enter: (node) => {
-        if (node.type.isError) {
-          hasError = true;
-          return false;
-        }
-      }
-    });
-    if (!hasError) {
-      this.renderer.compileAndStart(content);
-    }
-  }
-
-  openFile(path: string) {
-    this.stateManager.openTab(path);
-    this.loadFileIntoEditor(path);
+  openTab(path: string) {
+    this.app.openTab(path);
+    this.loadFile(path);
     this.renderTabs();
-    this.treeView.render();
   }
 
-  closeFile(path: string) {
-    this.stateManager.closeTab(path);
-    const newActive = this.stateManager.activeTab;
+  closeTab(path: string) {
+    this.app.closeTab(path);
+    const newActive = this.app.activeTab;
     if (newActive) {
-      this.loadFileIntoEditor(newActive);
+      this.loadFile(newActive);
     } else {
-      this.view.setState(EditorState.create({ doc: "", extensions: EXTENSIONS }));
+      this.view.setState(EMPTY_STATE);
     }
     this.renderTabs();
-    this.treeView.render();
   }
 
-  private loadFileIntoEditor(path: string) {
-    const content = this.stateManager.getFile(path);
+  setActiveTab(path: string) {
+    this.app.setActiveTab(path);
+    this.loadFile(path);
+    this.renderTabs();
+  }
+
+  private loadFile(path: string) {
+    if (this.loadedFiles[path]) {
+      this.view.setState(this.loadedFiles[path]);
+      return;
+    }
+    const content = this.app.read(path);
     if (content !== null) {
-      const newState = EditorState.create({
+      const fileState = EditorState.create({
         doc: content,
-        extensions: EXTENSIONS
+        extensions: this.extensions
       });
-      this.view.setState(newState);
-      this.checkAndCompile(newState, content);
+      this.view.setState(fileState);
+      this.loadedFiles[path] = fileState;
     }
   }
 
   renderTabs() {
     this.tabsContainer.innerHTML = '';
-    const tabs = this.stateManager.openTabs;
-    const active = this.stateManager.activeTab;
+    const tabs = this.app.openTabs;
+    const active = this.app.activeTab;
 
     tabs.forEach(path => {
       const tabEl = document.createElement('div');
@@ -166,19 +158,15 @@ export class Editor {
       closeSpan.textContent = '×';
       closeSpan.onclick = (e) => {
         e.stopPropagation();
-        this.closeFile(path);
+        this.closeTab(path);
       };
       tabEl.appendChild(closeSpan);
 
       tabEl.onclick = () => {
         if (path !== active) {
-          this.stateManager.setActiveTab(path);
-          this.loadFileIntoEditor(path);
-          this.renderTabs();
-          this.treeView.render();
+          this.setActiveTab(path);
         }
       };
-
       this.tabsContainer.appendChild(tabEl);
     });
   }

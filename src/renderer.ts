@@ -1,7 +1,19 @@
 import { Camera } from "./camera";
 import { InputManager } from "./inputManager";
 
-export class GLSLRenderer {
+const VERTEX_SCREEN = `#version 300 es
+precision highp float;
+const vec2 positions[3] = vec2[3](
+  vec2(-1.0, -1.0),
+  vec2(3.0, -1.0),
+  vec2(-1.0, 3.0)
+);
+void main() {
+  gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+}
+`;
+
+export class ShaderRenderer {
   private canvas: HTMLCanvasElement;
   private errorsDiv: HTMLDivElement;
   private statusDiv: HTMLDivElement;
@@ -11,18 +23,14 @@ export class GLSLRenderer {
   private startTime: number = 0;
   private lastRenderTime: number = 0;
 
-  private mouseX: number = 0;
-  private mouseY: number = 0
-  private buttonPressed: boolean = false;
-
-  private inputManager: InputManager;
+  private input: InputManager;
   private camera: Camera;
 
   constructor(canvas: HTMLCanvasElement, errorsDiv: HTMLDivElement, statusDiv: HTMLDivElement, inputManager: InputManager) {
     this.canvas = canvas;
     this.errorsDiv = errorsDiv;
     this.statusDiv = statusDiv;
-    this.inputManager = inputManager;
+    this.input = inputManager;
     this.camera = inputManager.getCamera();
     this.gl = canvas.getContext("webgl2");
 
@@ -31,24 +39,10 @@ export class GLSLRenderer {
     }
 
     this.startTime = performance.now();
-
-    canvas.addEventListener("mousemove", (e) => {
-      if (this.buttonPressed) {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
-      }
-    });
-    canvas.addEventListener("mousedown", () => {
-      this.buttonPressed = true;
-    });
-    canvas.addEventListener("mouseup", () => {
-      this.buttonPressed = false;
-    });
   }
 
   private updateStatus(fps: number) {
-    const status = `${fps.toFixed(1)} FPS` + (this.inputManager.inputLocked ? " | MOVE" : "");
+    const status = `${fps.toFixed(1)} FPS` + (this.input.inputLocked ? " | MOVE" : "");
     this.statusDiv.textContent = status;
   }
 
@@ -99,16 +93,6 @@ export class GLSLRenderer {
   compile(userCode: string): boolean {
     if (!this.gl) return false;
 
-    // Stop any existing render loop
-    this.stop();
-
-    const vertexSrc = `#version 300 es
-      in vec2 position;
-      void main() {
-        gl_Position = vec4(position, 0.0, 1.0);
-      }
-    `;
-
     const fragSrc = `#version 300 es
       precision highp float;
       uniform float iTime;
@@ -126,28 +110,8 @@ export class GLSLRenderer {
     `;
 
     try {
+      this.program = this.createProgram(VERTEX_SCREEN, fragSrc);
       this.clearError();
-
-      // Create and link the shader program
-      this.program = this.createProgram(vertexSrc, fragSrc);
-      this.gl.useProgram(this.program);
-
-      // Set up geometry (full screen quad)
-      const positionBuffer = this.gl.createBuffer();
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
-      this.gl.bufferData(
-        this.gl.ARRAY_BUFFER,
-        new Float32Array([
-          -1, -1, 1, -1, -1, 1,
-          -1, 1, 1, -1, 1, 1
-        ]),
-        this.gl.STATIC_DRAW
-      );
-
-      const posLoc = this.gl.getAttribLocation(this.program, "position");
-      this.gl.enableVertexAttribArray(posLoc);
-      this.gl.vertexAttribPointer(posLoc, 2, this.gl.FLOAT, false, 0, 0);
-
       return true;
     } catch (e: any) {
       this.showError(e.message);
@@ -157,6 +121,9 @@ export class GLSLRenderer {
 
   start() {
     if (!this.gl || !this.program) return;
+
+    this.stop();
+    this.gl.useProgram(this.program);
 
     const iTimeLoc = this.gl.getUniformLocation(this.program, "iTime");
     const iResolutionLoc = this.gl.getUniformLocation(this.program, "iResolution");
@@ -176,18 +143,18 @@ export class GLSLRenderer {
 
       const now = performance.now();
       const deltaTime = (now - this.lastRenderTime) / 1000.0;
-      this.inputManager.tick(deltaTime);
+      this.input.tick(deltaTime);
       this.updateStatus(1.0 / deltaTime);
       this.lastRenderTime = now;
 
       this.gl.uniform1f(iTimeLoc, (now - this.startTime) / 1000.0);
       this.gl.uniform2f(iResolutionLoc, this.canvas.width, this.canvas.height);
-      this.gl.uniform4f(iMouseLoc, this.mouseX, this.canvas.height - this.mouseY, this.buttonPressed ? 1.0 : 0.0, 0.0);
+      this.gl.uniform4f(iMouseLoc, this.input.mouseX, this.input.mouseY, this.input.canvasMouseDown ? 1.0 : 0.0, 0.0);
       this.gl.uniform3f(iCameraPositionLoc, this.camera.position[0], this.camera.position[1], this.camera.position[2]);
       this.gl.uniform3f(iCameraForwardLoc, this.camera.forward[0], this.camera.forward[1], this.camera.forward[2]);
       this.gl.uniform3f(iCameraRightLoc, this.camera.right[0], this.camera.right[1], this.camera.right[2]);
       this.gl.uniform3f(iCameraUpLoc, this.camera.up[0], this.camera.up[1], this.camera.up[2]);
-      this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+      this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
 
       this.animationId = requestAnimationFrame(render);
     };

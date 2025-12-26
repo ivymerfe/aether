@@ -1,0 +1,79 @@
+#top-bar {
+  display: flex;
+  height: 35px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+
+#sidebar-toggle {
+  width: 35px;
+  user-select: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  background-color: var(--bg-panel);
+  outline: none;
+  border: none;
+  border-right: 1px solid var(--border-color);
+}
+
+#sidebar-toggle:hover {
+  color: #fff;
+  background-color: var(--bg-panel-hover);
+}
+
+#tabs-container {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tabs */
+.tab {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+
+  min-width: fit-content;
+  user-select: none;
+  cursor: pointer;
+
+  font-size: 13px;
+  color: var(--text-muted);
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
+}
+
+.tab:hover {
+  background-color: var(--bg-panel-hover);
+  color: #eee;
+}
+
+.tab.active {
+  background-color: var(--bg-active);
+  color: #fff;
+  border-top: 2px solid var(--accent-color);
+}
+
+.tab-title {
+  margin-right: 8px;
+}
+
+.tab-close {
+  opacity: 0;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.tab:hover .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background-color: #444;
+  color: #fff;
+}

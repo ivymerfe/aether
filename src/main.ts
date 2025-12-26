@@ -1,12 +1,13 @@
-import './style.css'
+import './styles/base.css'
+import './styles/canvas.css'
+import './styles/editor.css'
+import './styles/top.css'
+import './styles/treeView.css'
 
-import { StateManager } from './stateManager'
-import { GLSLRenderer } from './renderer'
+import { App } from './app'
+import { ShaderRenderer } from './renderer'
 import { InputManager } from './inputManager'
 import { Editor } from './editor'
-
-const stateManager = new StateManager();
-const inputManager = new InputManager();
 
 const editorPanel = document.getElementById("editor-panel")!;
 const editorDiv = document.getElementById("editor")!;
@@ -18,11 +19,13 @@ const canvasContainer = document.getElementById("canvas-container")!;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
-const renderer = new GLSLRenderer(canvas, errorsDiv, statusDiv, inputManager);
-const editor = new Editor(editorDiv, tabsDiv, treeViewDiv, stateManager, renderer);
+const inputManager = new InputManager();
+const renderer = new ShaderRenderer(canvas, errorsDiv, statusDiv, inputManager);
+const app = new App(renderer);
+const editor = new Editor(editorDiv, tabsDiv, treeViewDiv, app);
 
 function updateSidebarVisibility() {
-    const isOpen = stateManager.isSidebarOpen;
+    const isOpen = app.isSidebarOpen;
     if (isOpen) {
         treeViewDiv.classList.add('visible');
         sidebarToggle.textContent = '◀';
@@ -33,7 +36,7 @@ function updateSidebarVisibility() {
 }
 
 sidebarToggle.onclick = () => {
-    stateManager.setSidebarOpen(!stateManager.isSidebarOpen);
+    app.setSidebarOpen(!app.isSidebarOpen);
     updateSidebarVisibility();
 };
 updateSidebarVisibility();

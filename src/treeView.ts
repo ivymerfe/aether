@@ -1,11 +1,11 @@
-import type { StateManager } from './stateManager';
+import type { App } from './app';
 
 export class FileTreeView {
   private container: HTMLElement;
-  private stateManager: StateManager;
+  private stateManager: App;
   private onFileSelect: (path: string) => void;
 
-  constructor(container: HTMLElement, stateManager: StateManager, onFileSelect: (path: string) => void) {
+  constructor(container: HTMLElement, stateManager: App, onFileSelect: (path: string) => void) {
     this.container = container;
     this.stateManager = stateManager;
     this.onFileSelect = onFileSelect;
@@ -14,7 +14,7 @@ export class FileTreeView {
 
   render() {
     this.container.innerHTML = '';
-    const files = this.stateManager.getFiles();
+    const files = this.stateManager.listFiles();
     let childrenContainer: HTMLDivElement | null = null;
     let activeTab = this.stateManager.activeTab;
     for (const filePath of files) {
