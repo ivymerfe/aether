@@ -146,6 +146,11 @@ export class Editor {
     tabs.forEach(path => {
       const tabEl = document.createElement('div');
       tabEl.className = `tab ${path === active ? 'active' : ''}`;
+      tabEl.onmouseup = (e) => {
+        if (e.button == 1) {
+          this.closeTab(path);
+        }
+      };
 
       const title = path;
 
@@ -158,7 +163,6 @@ export class Editor {
       closeSpan.className = 'tab-close';
       closeSpan.textContent = '×';
       closeSpan.onclick = (e) => {
-        e.stopPropagation();
         this.closeTab(path);
       };
       tabEl.appendChild(closeSpan);

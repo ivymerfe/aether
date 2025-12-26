@@ -3,7 +3,7 @@
 }
 
 #tree-view {
-  flex: 0.4;
+  flex: 0.3;
   height: 100%;
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border-color);
@@ -46,8 +46,7 @@
   height: var(--tree-element-height);
   box-sizing: border-box;
   font-size: medium;
-  min-width: 0;
-  max-width: 100%;
+  width: 100%;
   margin:0;
   background: none;
   border: none;
