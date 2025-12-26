@@ -101,9 +101,9 @@ const vsCodeDarkTheme = EditorView.theme(
 
     // Selection
     '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
-      {
-        backgroundColor: selection,
-      },
+    {
+      backgroundColor: selection,
+    },
 
     // Make sure selection appears above active line
     '.cm-selectionLayer': {
@@ -151,9 +151,15 @@ const vsCodeDarkTheme = EditorView.theme(
       border: `1px solid ${base02}`,
       borderRadius: generalPanel.borderRadius,
       padding: generalPanel.padding,
+      outline: 'none',
     },
     '.cm-panel button:hover': {
       backgroundColor: '#3a3a3a',
+      border: `1px solid ${base03}80`,
+    },
+    '.cm-panel button:active': {
+      backgroundColor: '#303030',
+      backgroundImage: 'none',
       border: `1px solid ${base03}80`,
     },
 

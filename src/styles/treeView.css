@@ -1,69 +1,76 @@
 #tree-view {
-  width: 200px;
+  flex: 0.4;
+  height: 100%;
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border-color);
   overflow-y: auto;
-  font-size: 13px;
-  padding-top: 5px;
   display: none;
+  outline: none;
 }
 
 #tree-view.visible {
   display: block;
 }
 
-.tree-item {
-  padding: 4px 8px;
-  cursor: pointer;
-  color: #ccc;
+.tree-group {
+  position: relative;
+  max-height: 2rem;
+  overflow: hidden;
   user-select: none;
 }
-
-.tree-item:hover {
-  background-color: var(--bg-panel-hover);
-  color: #fff;
+.tree-group.expanded {
+  max-height: none;
 }
 
-.tree-item.active {
-  background-color: #37373d;
-  color: #fff;
+.tree-group-button {
+  position: absolute;
+  user-select: none;
+  cursor: pointer;
+  z-index: 1;
+  right: 0;
+  top: 0;
+  font-family: monospace;
+  width: 1.5rem;
+  height: 2rem;
+  line-height: 2rem;
+  font-size: 1.3rem;
 }
 
-.tree-arrow {
-  display: inline-block;
-  text-align: center;
-  margin-right: 0.5em;
-  font-size: small;
-  transition: transform 0.1s;
-  color: var(--text-muted);
+.tree-file.active {
+  background-color: #252525;
 }
 
-.tree-arrow:hover {
-  color: #fff;
-}
-
-.tree-arrow.expanded {
-  transform: rotate(90deg);
-}
-
-.tree-arrow.hidden {
-  visibility: hidden;
-}
-
-.tree-label {
-  white-space: nowrap;
+.tree-input {
+  padding: 0 0.5rem;
+  height: 2rem;
+  box-sizing: border-box;
+  font-size: medium;
+  min-width: 0;
+  max-width: 100%;
+  margin:0;
+  background: none;
+  border: none;
+  outline: none;
   overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: default;
 }
 
-.tree-children {
+.tree-input:hover {
+  background-color: #303030;
+}
+
+.tree-input:focus {
+  background-color: #252525;
+}
+
+.tree-input:read-write {
+  cursor: text;
+}
+
+.tree-new-file {
   display: none;
 }
 
-.tree-children.expanded {
+.tree-new-file.visible {
   display: block;
-}
-
-.tree-file {
-  padding-left: 2em;
 }

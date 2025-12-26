@@ -6,7 +6,10 @@
 }
 
 #sidebar-toggle {
-  width: 35px;
+  width: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   user-select: none;
   cursor: pointer;
   color: var(--text-muted);

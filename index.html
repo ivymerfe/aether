@@ -8,16 +8,16 @@
   <title>Aether</title>
 </head>
 
-<body>
+<body style="background-color: #202020;">
   <div id="app">
     <div id="editor-panel">
       <div id="resizer"></div>
       <div id="top-bar">
-        <button id="sidebar-toggle" title="Toggle File Tree">▶</button>
+        <span id="sidebar-toggle" title="Toggle File Tree">▶</span>
         <div id="tabs-container"></div>
       </div>
       <div id="editor-main">
-        <div id="tree-view"></div>
+        <div id="tree-view" tabindex="0"></div>
         <div id="editor-area">
           <div id="editor"></div>
           <div id="errors"></div>
@@ -26,7 +26,7 @@
     </div>
     <div id="shader-view">
       <div id="canvas-container" class="canvas-aspect">
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" style="background-color: #202020;"></canvas>
         <div id="status"></div>
       </div>
     </div>

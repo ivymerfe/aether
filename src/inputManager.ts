@@ -51,7 +51,6 @@ export class InputManager {
     this.canvas.addEventListener("dblclick", (e) => {
       if (e.button === this.lookButton) {
         this.setInputLock(true);
-        e.preventDefault();
         this.canvas.requestPointerLock();
       }
     });
@@ -86,7 +85,6 @@ export class InputManager {
     window.addEventListener("mouseup", (e) => {
       if (e.button === this.lookButton) {
         this.lookButtonDown = false;
-        e.preventDefault();
       }
     });
     window.addEventListener("mousemove", (e) => {
@@ -96,7 +94,6 @@ export class InputManager {
     });
     window.addEventListener("wheel", (e) => {
       if (this.inputLocked) {
-        e.preventDefault();
         this.camera.onScroll(e.deltaY);
       }
     });

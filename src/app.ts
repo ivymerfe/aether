@@ -2,10 +2,10 @@ import type { ShaderRenderer } from "./renderer";
 
 export interface AppState {
   files: Record<string, string>;
-  loadedProject: string | null;
+  loadedFile: string | null;
   openTabs: string[];
   activeTab: string | null;
-  expandedProjects: string[];
+  expandedGroups: string[];
   isSidebarOpen: boolean;
 }
 
@@ -19,10 +19,10 @@ const DEFAULT_STATE: AppState = {
   files: {
     'default.main': DEFAULT_SHADER
   },
-  loadedProject: 'default',
+  loadedFile: 'default.main',
   openTabs: ['default.main'],
   activeTab: 'default.main',
-  expandedProjects: ['default'],
+  expandedGroups: ['default'],
   isSidebarOpen: true
 };
 
@@ -36,13 +36,12 @@ export class App {
 
     const raw = localStorage.getItem(App.STORAGE_KEY);
     if (raw) {
-      this.state = JSON.parse(raw) as AppState;
+      this.state = { ...DEFAULT_STATE, ...JSON.parse(raw) as AppState};
     } else {
       this.state = DEFAULT_STATE;
     }
-    if (this.state.loadedProject) {
-      const mainFile = `${this.state.loadedProject}.main`;
-      const content = this.state.files[mainFile];
+    if (this.state.loadedFile) {
+      const content = this.state.files[this.state.loadedFile];
       if (content) {
         this.renderer.compileAndStart(content);
       }
@@ -57,17 +56,43 @@ export class App {
     return this.state.files[path] ?? null;
   }
 
+  exists(path: string): boolean {
+    return this.state.files.hasOwnProperty(path);
+  }
+
   write(path: string, content: string, hasError: boolean) {
     this.state.files[path] = content;
     this.save();
-    const project = path.split('.')[0];
-    if (!hasError && this.state.loadedProject === project) {
+    if (!hasError) {
       this.renderer.compileAndStart(content);
     }
   }
 
   listFiles(): string[] {
     return Object.keys(this.state.files);
+  }
+
+  deleteFile(path: string) {
+    delete this.state.files[path];
+    this.save();
+  }
+
+  renameFile(oldPath: string, newPath: string) {
+    const content = this.state.files[oldPath];
+    if (content !== undefined) {
+      this.state.files[newPath] = content;
+      delete this.state.files[oldPath];
+      this.save();
+    }
+  }
+
+  loadFile(file: string) {
+    const content = this.state.files[file];
+    if (content !== undefined) {
+      this.state.loadedFile = file;
+      this.save();
+      this.renderer.compileAndStart(content);
+    }
   }
 
   get openTabs(): string[] {
@@ -78,12 +103,16 @@ export class App {
     return this.state.activeTab;
   }
 
-  get expandedProjects(): Set<string> {
-    return new Set(this.state.expandedProjects);
+  get expandedGroups(): Set<string> {
+    return new Set(this.state.expandedGroups);
   }
 
   get isSidebarOpen(): boolean {
     return this.state.isSidebarOpen;
+  }
+
+  isGroupExpanded(group: string): boolean {
+    return this.state.expandedGroups.includes(group);
   }
 
   setSidebarOpen(open: boolean) {
@@ -118,12 +147,12 @@ export class App {
     }
   }
 
-  toggleProjectExpansion(project: string) {
-    const idx = this.state.expandedProjects.indexOf(project);
+  toggleGroup(group: string) {
+    const idx = this.state.expandedGroups.indexOf(group);
     if (idx === -1) {
-      this.state.expandedProjects.push(project);
+      this.state.expandedGroups.push(group);
     } else {
-      this.state.expandedProjects.splice(idx, 1);
+      this.state.expandedGroups.splice(idx, 1);
     }
     this.save();
   }

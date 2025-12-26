@@ -87,9 +87,7 @@ export class Editor {
     });
     this.extensions = [...EXTENSIONS, updateListener];
 
-    this.treeView = new FileTreeView(treeContainer, app, (path) => {
-      this.openTab(path);
-    });
+    this.treeView = new FileTreeView(treeContainer, app, this);
 
     this.renderTabs();
     const active = this.app.activeTab;
