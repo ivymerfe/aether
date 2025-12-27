@@ -10,21 +10,11 @@
   overflow-y: auto;
   display: none;
   padding-top: 0.5rem;
+  user-select: none;
 }
 
 #tree-view.visible {
   display: block;
-}
-
-.tree-group {
-  position: relative;
-  max-height: var(--tree-element-height);
-  overflow: hidden;
-  user-select: none;
-}
-
-.tree-group.expanded {
-  max-height: none;
 }
 
 .tree-button {
@@ -68,7 +58,6 @@
 }
 
 .tree-input:focus {
-  pointer-events: all;
   color: #fff;
 }
 

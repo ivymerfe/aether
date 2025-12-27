@@ -139,7 +139,7 @@ export class Editor {
   }
 
   renderTabs() {
-    this.treeView.updateActiveTab();
+    this.treeView.render();
 
     this.tabsContainer.innerHTML = '';
     const tabs = this.app.openTabs;

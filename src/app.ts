@@ -182,5 +182,6 @@ export class App {
       this.state.expandedGroups.splice(idx, 1);
     }
     this.save();
+    return idx === -1;
   }
 }

@@ -44,9 +44,6 @@ export class InputManager {
         e.preventDefault();
         if (!e.altKey) e.stopImmediatePropagation();
       }
-      if (e.code === "AltLeft" && this.lastKey === "AltLeft") {
-        this.setInputLock(!this.inputLocked);
-      }
     });
     this.canvas.addEventListener("dblclick", (e) => {
       if (e.button === this.lookButton) {
