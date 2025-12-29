@@ -50,12 +50,13 @@ const EXTENSIONS = [
 const EMPTY_STATE = EditorState.create({ doc: "", extensions: EXTENSIONS });
 
 export class Editor {
-  private view: EditorView;
+  public view: EditorView;
   private app: App;
   private tabsContainer: HTMLElement;
   private treeView: FileTreeView;
   private extensions: Extension[];
   private loadedFiles: Record<string, EditorState> = {};
+  private tabPool: HTMLElement[] = [];
 
   constructor(editorContainer: HTMLElement, tabsContainer: HTMLElement, treeContainer: HTMLElement, app: App) {
     this.app = app;
@@ -87,6 +88,7 @@ export class Editor {
     });
     this.extensions = [...EXTENSIONS, updateListener];
 
+    this.bindTabEvents();
     this.treeView = new FileTreeView(treeContainer, app, this);
     this.reload();
   }
@@ -138,43 +140,73 @@ export class Editor {
     }
   }
 
+  private bindTabEvents() {
+    this.tabsContainer.addEventListener('mouseup', (e) => {
+      const target = e.target as HTMLElement;
+      const tabEl = target.closest('.tab') as HTMLElement;
+      if (!tabEl) return;
+
+      const path = tabEl.dataset.path!;
+      if (e.button === 1) {
+        e.preventDefault();
+        this.closeTab(path);
+        return;
+      }
+      if (target.classList.contains('tab-close')) {
+        this.closeTab(path);
+        return;
+      }
+      if (path !== this.app.activeTab) {
+        this.setActiveTab(path);
+      }
+    });
+  }
+
+private ensureTabNodes(n: number) {
+    const currentCount = this.tabsContainer.children.length;
+
+    if (currentCount < n) {
+      for (let i = currentCount; i < n; i++) {
+        const tabEl = document.createElement('div');
+        tabEl.className = 'tab';
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'tab-title';
+        
+        const closeSpan = document.createElement('span');
+        closeSpan.className = 'tab-close';
+        closeSpan.textContent = '×';
+
+        tabEl.appendChild(titleSpan);
+        tabEl.appendChild(closeSpan);
+        this.tabsContainer.appendChild(tabEl);
+      }
+    } else if (currentCount > n) {
+      for (let i = currentCount; i > n; i--) {
+        this.tabsContainer.lastElementChild?.remove();
+      }
+    }
+    this.tabPool = Array.from(this.tabsContainer.children) as HTMLElement[];
+  }
+
   renderTabs() {
     this.treeView.render();
-
-    this.tabsContainer.innerHTML = '';
+    
     const tabs = this.app.openTabs;
     const active = this.app.activeTab;
 
-    tabs.forEach(path => {
-      const tabEl = document.createElement('div');
-      tabEl.className = `tab ${path === active ? 'active' : ''}`;
-      tabEl.onmouseup = (e) => {
-        if (e.button == 1) {
-          this.closeTab(path);
-        }
-      };
+    this.ensureTabNodes(tabs.length);
 
-      const title = path;
-
-      const titleSpan = document.createElement('span');
-      titleSpan.className = 'tab-title';
-      titleSpan.textContent = title;
-      tabEl.appendChild(titleSpan);
-
-      const closeSpan = document.createElement('span');
-      closeSpan.className = 'tab-close';
-      closeSpan.textContent = '×';
-      closeSpan.onclick = (e) => {
-        this.closeTab(path);
-      };
-      tabEl.appendChild(closeSpan);
-
-      tabEl.onclick = () => {
-        if (path !== active) {
-          this.setActiveTab(path);
-        }
-      };
-      this.tabsContainer.appendChild(tabEl);
+    tabs.forEach((path, i) => {
+      const el = this.tabPool[i];
+      const titleSpan = el.querySelector('.tab-title') as HTMLElement;
+      
+      el.dataset.path = path;
+      el.className = `tab ${path === active ? 'active' : ''}`;
+      
+      if (titleSpan.textContent !== path) {
+        titleSpan.textContent = path;
+      }
     });
   }
 }

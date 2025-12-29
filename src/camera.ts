@@ -48,7 +48,7 @@ export class Camera {
     onMouse(deltaYaw: number, deltaPitch: number) {
         this.yaw += deltaYaw;
         this.pitch += deltaPitch;
-        const maxPitch = Math.PI / 2 - 0.01;
+        const maxPitch = Math.PI / 2;
         if (this.pitch > maxPitch) this.pitch = maxPitch;
         if (this.pitch < -maxPitch) this.pitch = -maxPitch;
         this.updateVectors();

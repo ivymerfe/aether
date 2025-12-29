@@ -45,6 +45,9 @@ var editorShown = true;
 function showEditor(shown: boolean) {
   editorShown = shown;
   editorPanel.style.display = editorShown ? "" : "none";
+  if (shown) {
+    editor.view.focus();
+  }
 }
 
 window.addEventListener("keydown", async (e) => {

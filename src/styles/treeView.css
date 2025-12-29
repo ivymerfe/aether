@@ -33,6 +33,7 @@
 .tree-group-button {
   left: 0rem;
   top: 0;
+  pointer-events: none;
 }
 
 .tree-load-button {
