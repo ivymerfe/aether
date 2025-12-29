@@ -58,7 +58,7 @@ export class Editor {
   private loadedFiles: Record<string, EditorState> = {};
   private tabPool: HTMLElement[] = [];
 
-  constructor(editorContainer: HTMLElement, tabsContainer: HTMLElement, treeContainer: HTMLElement, app: App) {
+  constructor(app: App, editorContainer: HTMLElement, tabsContainer: HTMLElement, treeContainer: HTMLElement) {
     this.app = app;
     this.tabsContainer = tabsContainer;
 

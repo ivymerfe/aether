@@ -5,8 +5,6 @@ import './styles/top.css'
 import './styles/treeView.css'
 
 import { App } from './app'
-import { ShaderRenderer } from './renderer'
-import { InputManager } from './inputManager'
 import { Editor } from './editor'
 
 const editorPanel = document.getElementById("editor-panel")!;
@@ -19,10 +17,8 @@ const canvasContainer = document.getElementById("canvas-container")!;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
-const inputManager = new InputManager();
-const renderer = new ShaderRenderer(canvas, errorsDiv, statusDiv, inputManager);
-const app = new App(renderer);
-const editor = new Editor(editorDiv, tabsDiv, treeViewDiv, app);
+const app = new App(canvas, errorsDiv, statusDiv);
+const editor = new Editor(app, editorDiv, tabsDiv, treeViewDiv);
 
 function updateSidebarVisibility() {
     const isOpen = app.isSidebarOpen;
@@ -69,11 +65,11 @@ window.addEventListener("keydown", async (e) => {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
       showEditor(true);
-      inputManager.setInputLock(false);
+      app.inputManager.setInputLock(false);
     } else {
       await canvasContainer.requestFullscreen();
       await canvas.requestPointerLock();
-      inputManager.setInputLock(true);
+      app.inputManager.setInputLock(true);
     }
     e.preventDefault();
   }

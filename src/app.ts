@@ -1,8 +1,9 @@
-import type { ShaderRenderer } from "./renderer";
+import { InputManager } from "./inputManager";
+import { ShaderRenderer } from "./renderer";
 
 export interface AppState {
   files: Record<string, string>;
-  loadedFile: string | null;
+  loadedShader: string | null;
   openTabs: string[];
   activeTab: string | null;
   expandedGroups: string[];
@@ -17,34 +18,46 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 const DEFAULT_STATE: AppState = {
   files: {
-    'default.main': DEFAULT_SHADER
+    "default.main": DEFAULT_SHADER,
   },
-  loadedFile: 'default.main',
-  openTabs: ['default.main'],
-  activeTab: 'default.main',
-  expandedGroups: ['default'],
-  isSidebarOpen: true
+  loadedShader: "default.main",
+  openTabs: ["default.main"],
+  activeTab: "default.main",
+  expandedGroups: ["default"],
+  isSidebarOpen: true,
 };
 
 export class App {
-  private static STORAGE_KEY = 'editor-state';
+  private static STORAGE_KEY = "editor-state";
   private state: AppState;
-  private renderer: ShaderRenderer;
 
-  constructor(renderer: ShaderRenderer) {
-    this.renderer = renderer;
+  public inputManager: InputManager;
+  public renderer: ShaderRenderer;
+
+  constructor(
+    canvas: HTMLCanvasElement,
+    errorsDiv: HTMLDivElement,
+    statusDiv: HTMLDivElement
+  ) {
+    this.inputManager = new InputManager();
+    this.renderer = new ShaderRenderer(this, canvas, errorsDiv, statusDiv);
 
     const raw = localStorage.getItem(App.STORAGE_KEY);
     if (raw) {
-      this.state = { ...DEFAULT_STATE, ...JSON.parse(raw) as AppState };
+      this.state = { ...DEFAULT_STATE, ...(JSON.parse(raw) as AppState) };
     } else {
       this.state = DEFAULT_STATE;
     }
-    if (this.state.loadedFile) {
-      const content = this.state.files[this.state.loadedFile];
-      if (content) {
-        this.renderer.compileAndStart(content);
-      }
+    if (this.state.loadedShader) {
+      this.renderer.loadShader(this.state.loadedShader);
+    }
+  }
+
+  loadShader(file: string) {
+    if (this.exists(file)) {
+      this.state.loadedShader = file;
+      this.save();
+      this.renderer.loadShader(file);
     }
   }
 
@@ -64,7 +77,9 @@ export class App {
     this.state.files[path] = content;
     this.save();
     if (!hasError) {
-      this.renderer.compileAndStart(content);
+      if (this.state.loadedShader) {
+        this.renderer.loadShader(this.state.loadedShader);
+      }
     }
   }
 
@@ -93,7 +108,7 @@ export class App {
   renameGroup(oldGroup: string, newGroup: string) {
     const files = Object.keys(this.state.files);
     for (const file of files) {
-      if (file.startsWith(oldGroup + '.')) {
+      if (file.startsWith(oldGroup + ".")) {
         const newFile = newGroup + file.slice(oldGroup.length);
         this.state.files[newFile] = this.state.files[file];
         delete this.state.files[file];
@@ -111,15 +126,6 @@ export class App {
       this.state.expandedGroups.push(newGroup);
     }
     this.save();
-  }
-
-  loadFile(file: string) {
-    const content = this.state.files[file];
-    if (content !== undefined) {
-      this.state.loadedFile = file;
-      this.save();
-      this.renderer.compileAndStart(content);
-    }
   }
 
   get openTabs(): string[] {
@@ -162,7 +168,8 @@ export class App {
     }
     if (this.state.activeTab === path) {
       const newIdx = idx > 0 ? idx - 1 : 0;
-      this.state.activeTab = this.state.openTabs.length > 0 ? this.state.openTabs[newIdx] : null;
+      this.state.activeTab =
+        this.state.openTabs.length > 0 ? this.state.openTabs[newIdx] : null;
     }
     this.save();
   }

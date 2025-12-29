@@ -124,7 +124,7 @@ export class FileTreeView {
       const target = e.target as HTMLElement;
       if (target.classList.contains("tree-load-button")) {
         e.stopPropagation();
-        this.app.loadFile(target.dataset.path!);
+        this.app.loadShader(target.dataset.path!);
         return;
       }
       if (!e.altKey) {
