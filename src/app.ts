@@ -1,5 +1,5 @@
 import { InputManager } from "./inputManager";
-import { ShaderRenderer } from "./renderer";
+import { ShaderRenderer } from "./render/shaderRenderer";
 
 export interface AppState {
   files: Record<string, string>;

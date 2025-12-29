@@ -1,4 +1,4 @@
-import { Camera } from "./camera";
+import { Camera } from "./render/camera";
 
 export class InputManager {
   private canvas: HTMLCanvasElement;
