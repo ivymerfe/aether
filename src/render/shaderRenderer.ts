@@ -352,8 +352,8 @@ export class ShaderRenderer {
         pass.uMouse,
         this.input.mouseX,
         this.input.mouseY,
-        this.input.canvasMouseDown ? 1.0 : 0.0,
-        0.0
+        this.input.mouseZ ? 1.0 : 0.0,
+        this.input.mouseW ? 1.0 : 0.0,
       );
     }
     if (pass.uCamPos) {

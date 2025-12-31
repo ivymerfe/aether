@@ -48,6 +48,11 @@ function showEditor(shown: boolean) {
 
 window.addEventListener("keydown", async (e) => {
   if (e.code == "AltLeft") e.preventDefault();
+
+  if (e.code == "KeyG" && e.altKey) {
+    app.reload();
+    e.preventDefault();
+  }
   
   if (e.code == "KeyR" && e.altKey) {
     showEditor(!editorShown);

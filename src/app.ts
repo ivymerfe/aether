@@ -55,6 +55,12 @@ export class App {
 
   reloadRoutine() {
     if (this.shouldReload && this.state.loadedShader) {
+      this.reload();
+    }
+  }
+
+  reload() {
+    if (this.state.loadedShader) {
       this.renderer.loadShader(this.state.loadedShader);
       this.shouldReload = false;
     }

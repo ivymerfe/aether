@@ -8,6 +8,7 @@ export class InputManager {
   private sensitivityY: number = 0.004;
   private lookButton = 0;
   private moveButton = 2;
+  private secondaryButton = 4;
 
   public lookButtonDown: boolean = false;
   public inputLocked = false;
@@ -16,7 +17,8 @@ export class InputManager {
 
   public mouseX: number = 0;
   public mouseY: number = 0
-  public canvasMouseDown: boolean = false;
+  public mouseZ: boolean = false;
+  public mouseW: boolean = false;
 
   public setInputLock(value: boolean) {
     this.inputLocked = value;
@@ -55,13 +57,20 @@ export class InputManager {
     this.canvas.addEventListener("mousedown", (e) => {
       if (e.button === this.lookButton) {
         this.lookButtonDown = true;
-        this.canvasMouseDown = true;
+        this.mouseZ = true;
+        e.preventDefault();
+      }
+      if (e.button === this.secondaryButton) {
+        this.mouseW = true;
         e.preventDefault();
       }
     });
     this.canvas.addEventListener("mouseup", (e) => {
       if (e.button === this.lookButton) {
-        this.canvasMouseDown = false;
+        this.mouseZ = false;
+      }
+      if (e.button === this.secondaryButton) {
+        this.mouseW = false;
       }
     });
     this.canvas.addEventListener("mousemove", (e) => {
