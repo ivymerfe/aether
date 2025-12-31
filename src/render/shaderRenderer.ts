@@ -20,16 +20,49 @@ void main() {
 }
 `;
 
+const FRAG_PRESENT = `#version 300 es
+precision highp float;
+
+uniform sampler2D uTex;
+uniform vec2 uResolution;
+
+out vec4 fragColor;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / uResolution;
+  fragColor = texture(uTex, uv);
+}
+`;
+
 type SamplerBinding =
   | { kind: "texture"; name: string; url: string }
-  | { kind: "buffer"; name: string; file: string };
+  | { kind: "buffer"; name: string; file: string }
+  | { kind: "prev"; name: string };
 
 type CompiledPass = {
   file: string;
   program: WebGLProgram;
-  // if this pass is used as a buffer output, we render it into these:
+
+  // render target (if needed)
   framebuffer: WebGLFramebuffer | null;
+
+  // current frame output (what downstream passes should sample)
   colorTex: WebGLTexture | null;
+
+  // previous frame output (what @prev samples)
+  prevTex: WebGLTexture | null;
+
+  // internal ping-pong storage (when @prev is used)
+  tex0: WebGLTexture | null;
+  tex1: WebGLTexture | null;
+  flip: boolean;
+
+  // render target allocation size (avoid reinitializing every frame)
+  rtWidth: number;
+  rtHeight: number;
+
+  usesPrev: boolean;
+  needsRenderTarget: boolean;
 
   // directives
   samplers: SamplerBinding[];
@@ -61,6 +94,10 @@ export class ShaderRenderer {
   private camera: Camera;
 
   private vao: WebGLVertexArrayObject | null = null;
+
+  private presentProgram: WebGLProgram | null = null;
+  private uPresentTex: WebGLUniformLocation | null = null;
+  private uPresentResolution: WebGLUniformLocation | null = null;
 
   private pipelineDesc: PipelineDesc | null = null;
   private passes: CompiledPass[] = [];
@@ -94,6 +131,14 @@ export class ShaderRenderer {
 
       this.gl.clearColor(0, 0, 0, 1);
       this.texturePool = new TexturePool(this.gl);
+
+      // Program used to present an offscreen texture to the canvas.
+      this.presentProgram = this.createProgram(VERTEX_SCREEN, FRAG_PRESENT);
+      this.uPresentTex = this.gl.getUniformLocation(this.presentProgram, "uTex");
+      this.uPresentResolution = this.gl.getUniformLocation(
+        this.presentProgram,
+        "uResolution"
+      );
     }
 
     this.pipelineBuilder = new ShaderPipelineBuilder((p) => this.app.read(p));
@@ -125,6 +170,14 @@ export class ShaderRenderer {
   private clearError() {
     this.errorsDiv.textContent = "";
   }
+
+  stop() {
+    if (this.animationId !== null) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  }
+
   compile(file: string): boolean {
     if (!this.gl || !this.texturePool) return false;
 
@@ -148,10 +201,23 @@ export class ShaderRenderer {
       for (const p of this.pipelineDesc.passesInOrder) {
         for (const b of p.expanded.buffers) referencedAsBuffer.add(b.file);
       }
+
+      const entry = this.pipelineDesc.entry;
+
       for (const p of newPasses) {
-        if (referencedAsBuffer.has(p.file)) {
-          this.ensurePassRenderTarget(p);
+        p.needsRenderTarget =
+          referencedAsBuffer.has(p.file) || p.usesPrev || p.file === entry;
+
+        // Only force RT for entry if it actually needs it (prev/buffer). Otherwise render to screen.
+        if (
+          p.file === entry &&
+          !p.usesPrev &&
+          !referencedAsBuffer.has(p.file)
+        ) {
+          p.needsRenderTarget = false;
         }
+
+        if (p.needsRenderTarget) this.ensurePassRenderTarget(p);
       }
 
       // kick texture loads (placeholders returned immediately)
@@ -160,6 +226,7 @@ export class ShaderRenderer {
           this.texturePool.get(t.url);
         }
       }
+
       this.disposePassResources();
       this.passes = newPasses;
       this.passByFile = newPassByFile;
@@ -184,7 +251,7 @@ export class ShaderRenderer {
 
       // resize-aware RTs
       for (const p of this.passes) {
-        if (p.framebuffer) this.ensurePassRenderTarget(p);
+        if (p.needsRenderTarget) this.ensurePassRenderTarget(p);
       }
 
       const now = performance.now();
@@ -195,15 +262,36 @@ export class ShaderRenderer {
 
       const timeSec = (now - this.startTime) / 1000.0;
 
-      // render passes in topo order (deps first), final pass renders to screen
+      // render passes in topo order (deps first)
       const entry = this.pipelineDesc?.entry ?? null;
 
       for (const pass of this.passes) {
         const isFinal = pass.file === entry;
-        this.renderPass(pass, {
-          timeSec,
-          isFinal,
-        });
+        this.renderPass(pass, { timeSec, isFinal });
+      }
+
+      // If entry was rendered offscreen (needed for @prev/@buffer), present it to the canvas.
+      if (entry) {
+        const finalPass = this.passByFile.get(entry);
+        if (finalPass?.needsRenderTarget && finalPass.colorTex) {
+          const w = Math.max(1, this.canvas.width | 0);
+          const h = Math.max(1, this.canvas.height | 0);
+
+          this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+          this.gl.viewport(0, 0, w, h);
+
+          if (this.presentProgram && this.uPresentTex && this.uPresentResolution) {
+            this.gl.useProgram(this.presentProgram);
+            if (this.vao) this.gl.bindVertexArray(this.vao);
+
+            this.gl.uniform2f(this.uPresentResolution, w, h);
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, finalPass.colorTex);
+            this.gl.uniform1i(this.uPresentTex, 0);
+
+            this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
+          }
+        }
       }
 
       this.animationId = requestAnimationFrame(render);
@@ -212,43 +300,53 @@ export class ShaderRenderer {
     render();
   }
 
-  stop() {
-    if (this.animationId !== null) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = null;
-    }
-  }
-
   private renderPass(
     pass: CompiledPass,
     opts: { timeSec: number; isFinal: boolean }
   ) {
     if (!this.gl || !this.texturePool) return;
 
-    // target
-    if (opts.isFinal) {
+    const w = Math.max(1, this.canvas.width | 0);
+    const h = Math.max(1, this.canvas.height | 0);
+
+    // Decide target
+    if (opts.isFinal && !pass.needsRenderTarget) {
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-    } else if (pass.framebuffer) {
+    } else if (pass.framebuffer && pass.needsRenderTarget) {
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, pass.framebuffer);
+      
+      // If @prev is used, attach the correct ping-pong texture for writing this frame.
+      if (pass.usesPrev && pass.tex0 && pass.tex1) {
+        const readTex = pass.flip ? pass.tex0 : pass.tex1;
+        const writeTex = pass.flip ? pass.tex1 : pass.tex0;
+
+        // @prev samples last frame
+        pass.prevTex = readTex;
+
+        // downstream passes should see current frame
+        pass.colorTex = writeTex;
+
+        this.gl.framebufferTexture2D(
+          this.gl.FRAMEBUFFER,
+          this.gl.COLOR_ATTACHMENT0,
+          this.gl.TEXTURE_2D,
+          writeTex,
+          0
+        );
+      }
     } else {
-      // pass without RT and not final: do not draw anything
       return;
     }
 
     this.gl.useProgram(pass.program);
     if (this.vao) this.gl.bindVertexArray(this.vao);
 
-    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    this.gl.viewport(0, 0, w, h);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     // common uniforms
     if (pass.uTime) this.gl.uniform1f(pass.uTime, opts.timeSec);
-    if (pass.uResolution)
-      this.gl.uniform2f(
-        pass.uResolution,
-        this.canvas.width,
-        this.canvas.height
-      );
+    if (pass.uResolution) this.gl.uniform2f(pass.uResolution, w, h);
     if (pass.uMouse) {
       this.gl.uniform4f(
         pass.uMouse,
@@ -291,7 +389,7 @@ export class ShaderRenderer {
       );
     }
 
-    // samplers: textures + buffers
+    // samplers: textures + buffers + prev
     let unit = 0;
     for (const s of pass.samplers) {
       const loc = pass.uSamplerLocs.get(s.name) ?? null;
@@ -305,14 +403,12 @@ export class ShaderRenderer {
       if (s.kind === "texture") {
         const tex = this.texturePool.get(s.url);
         this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
-      } else {
+      } else if (s.kind === "buffer") {
         const dep = this.passByFile.get(s.file);
-        if (!dep?.colorTex) {
-          // if dependency does not yet have RT, bind a dummy
-          this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-        } else {
-          this.gl.bindTexture(this.gl.TEXTURE_2D, dep.colorTex);
-        }
+        this.gl.bindTexture(this.gl.TEXTURE_2D, dep?.colorTex ?? null);
+      } else {
+        // @prev of this pass
+        this.gl.bindTexture(this.gl.TEXTURE_2D, pass.prevTex ?? null);
       }
 
       this.gl.uniform1i(loc, unit);
@@ -320,6 +416,9 @@ export class ShaderRenderer {
     }
 
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
+
+    // After rendering, flip ping-pong so next frame reads what we just wrote.
+    if (pass.usesPrev) pass.flip = !pass.flip;
   }
 
   private compilePass(pass: PassDesc): CompiledPass {
@@ -328,12 +427,14 @@ export class ShaderRenderer {
     const expanded = pass.expanded;
 
     // Build sampler list (stable order):
-    // first textures, then buffers (so units are deterministic)
+    // textures, buffers, prev (deterministic units)
     const samplers: SamplerBinding[] = [];
     for (const t of expanded.textures)
       samplers.push({ kind: "texture", name: t.name, url: t.url });
     for (const b of expanded.buffers)
       samplers.push({ kind: "buffer", name: b.name, file: b.file });
+    for (const p of expanded.prevs)
+      samplers.push({ kind: "prev", name: p.name });
 
     const samplerUniformDecl = samplers
       .map((s) => `uniform sampler2D ${s.name};`)
@@ -367,11 +468,26 @@ void main() {
       uSamplerLocs.set(s.name, this.gl.getUniformLocation(program, s.name));
     }
 
+    const usesPrev = expanded.prevs.length > 0;
+
     return {
       file: pass.file,
       program,
+
       framebuffer: null,
       colorTex: null,
+      prevTex: null,
+
+      tex0: null,
+      tex1: null,
+      flip: true,
+
+      rtWidth: 0,
+      rtHeight: 0,
+
+      usesPrev,
+      needsRenderTarget: false,
+
       samplers,
 
       uTime: this.gl.getUniformLocation(program, "iTime"),
@@ -391,92 +507,112 @@ void main() {
     const w = Math.max(1, this.canvas.width | 0);
     const h = Math.max(1, this.canvas.height | 0);
 
-    // (re)create if missing
-    if (!pass.framebuffer || !pass.colorTex) {
-      const fbo = this.gl.createFramebuffer();
-      const tex = this.gl.createTexture();
-      if (!fbo || !tex)
-        throw new Error("Failed to create framebuffer/texture for buffer pass");
+    const needsRealloc = pass.rtWidth !== w || pass.rtHeight !== h;
 
-      this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_MIN_FILTER,
-        this.gl.LINEAR
+    const ensureTexStorage = (tex: WebGLTexture) => {
+      this.gl!.bindTexture(this.gl!.TEXTURE_2D, tex);
+      this.gl!.texParameteri(
+        this.gl!.TEXTURE_2D,
+        this.gl!.TEXTURE_MIN_FILTER,
+        this.gl!.LINEAR
       );
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_MAG_FILTER,
-        this.gl.LINEAR
+      this.gl!.texParameteri(
+        this.gl!.TEXTURE_2D,
+        this.gl!.TEXTURE_MAG_FILTER,
+        this.gl!.LINEAR
       );
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_WRAP_S,
-        this.gl.CLAMP_TO_EDGE
+      this.gl!.texParameteri(
+        this.gl!.TEXTURE_2D,
+        this.gl!.TEXTURE_WRAP_S,
+        this.gl!.CLAMP_TO_EDGE
       );
-      this.gl.texParameteri(
-        this.gl.TEXTURE_2D,
-        this.gl.TEXTURE_WRAP_T,
-        this.gl.CLAMP_TO_EDGE
-      );
-      this.gl.texImage2D(
-        this.gl.TEXTURE_2D,
-        0,
-        this.gl.RGBA,
-        w,
-        h,
-        0,
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        null
+      this.gl!.texParameteri(
+        this.gl!.TEXTURE_2D,
+        this.gl!.TEXTURE_WRAP_T,
+        this.gl!.CLAMP_TO_EDGE
       );
 
-      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fbo);
-      this.gl.framebufferTexture2D(
-        this.gl.FRAMEBUFFER,
-        this.gl.COLOR_ATTACHMENT0,
-        this.gl.TEXTURE_2D,
-        tex,
-        0
-      );
-
-      const status = this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER);
-      if (status !== this.gl.FRAMEBUFFER_COMPLETE) {
-        throw new Error(
-          `Framebuffer incomplete for pass ${pass.file}: 0x${status.toString(
-            16
-          )}`
+      // IMPORTANT: texImage2D reinitializes the texture, destroying previous-frame data.
+      // Only (re)allocate when canvas size changes or texture is new.
+      if (needsRealloc) {
+        this.gl!.texImage2D(
+          this.gl!.TEXTURE_2D,
+          0,
+          this.gl!.RGBA,
+          w,
+          h,
+          0,
+          this.gl!.RGBA,
+          this.gl!.UNSIGNED_BYTE,
+          null
         );
       }
+    };
 
+    if (!pass.framebuffer) {
+      const fbo = this.gl.createFramebuffer();
+      if (!fbo) throw new Error("Failed to create framebuffer for pass");
       pass.framebuffer = fbo;
-      pass.colorTex = tex;
-
-      // cleanup binds
-      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-      return;
     }
 
-    // resize tex if needed (we don’t store size per-pass; just reallocate each time canvas changes)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, pass.colorTex);
-    this.gl.texImage2D(
+    // Ensure textures exist
+    if (!pass.tex0) {
+      pass.tex0 = this.gl.createTexture();
+      if (!pass.tex0) throw new Error("Failed to create texture for pass");
+      // Force allocation on first creation
+      pass.rtWidth = 0;
+      pass.rtHeight = 0;
+    }
+    ensureTexStorage(pass.tex0);
+
+    if (pass.usesPrev) {
+      if (!pass.tex1) {
+        pass.tex1 = this.gl.createTexture();
+        if (!pass.tex1)
+          throw new Error("Failed to create ping-pong texture for pass");
+        // Force allocation on first creation
+        pass.rtWidth = 0;
+        pass.rtHeight = 0;
+      }
+      ensureTexStorage(pass.tex1);
+    } else {
+      // no @prev: single output texture
+      pass.tex1 = null;
+    }
+
+    // Record allocation size after (potential) realloc.
+    pass.rtWidth = w;
+    pass.rtHeight = h;
+
+    // Set a default attachment (renderPass may override per-frame for @prev ping-pong)
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, pass.framebuffer);
+    this.gl.framebufferTexture2D(
+      this.gl.FRAMEBUFFER,
+      this.gl.COLOR_ATTACHMENT0,
       this.gl.TEXTURE_2D,
-      0,
-      this.gl.RGBA,
-      w,
-      h,
-      0,
-      this.gl.RGBA,
-      this.gl.UNSIGNED_BYTE,
-      null
+      pass.tex0,
+      0
     );
+
+    const status = this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER);
+    if (status !== this.gl.FRAMEBUFFER_COMPLETE) {
+      throw new Error(
+        `Framebuffer incomplete for pass ${pass.file}: 0x${status.toString(16)}`
+      );
+    }
+
+    pass.colorTex = pass.tex0;
+    pass.prevTex = pass.usesPrev ? pass.tex1 : null;
+
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
   }
 
   private disposePassResources() {
     if (!this.gl) return;
     for (const p of this.passes) {
       if (p.framebuffer) this.gl.deleteFramebuffer(p.framebuffer);
-      if (p.colorTex) this.gl.deleteTexture(p.colorTex);
+      if (p.tex0) this.gl.deleteTexture(p.tex0);
+      if (p.tex1) this.gl.deleteTexture(p.tex1);
       if (p.program) this.gl.deleteProgram(p.program);
     }
   }
@@ -521,4 +657,3 @@ void main() {
     return program;
   }
 }
-      

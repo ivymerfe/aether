@@ -1,10 +1,12 @@
 export type TextureDirective = { name: string; url: string };
 export type BufferDirective = { name: string; file: string };
+export type PrevDirective = { name: string };
 
 export type ExpandedShader = {
   code: string;
   textures: TextureDirective[];
   buffers: BufferDirective[];
+  prevs: PrevDirective[];
 };
 
 export type PassDesc = {
@@ -22,6 +24,7 @@ type DirectiveParse = {
   includes: string[];
   textures: TextureDirective[];
   buffers: BufferDirective[];
+  prevs: PrevDirective[];
   rest: string; // source without directive-lines (but with kept preamble)
 };
 
@@ -39,6 +42,16 @@ function parseCommaPair(arg: string): [string, string] {
   return [a, b];
 }
 
+function parseNameOnly(arg: string): string {
+  // Allow either "@prev name" or "@prev name, ..." (ignore trailing comma payload)
+  const trimmed = arg.trim();
+  if (!trimmed) throw new Error(`@prev requires varName`);
+  const comma = trimmed.indexOf(",");
+  const name = (comma === -1 ? trimmed : trimmed.slice(0, comma)).trim();
+  if (!name) throw new Error(`@prev requires varName`);
+  return normalizeName(name);
+}
+
 /**
  * Scans only the "top block" (empty lines + //comments).
  * Removes directive lines from code, keeps regular comments.
@@ -49,6 +62,7 @@ function parseLeadingDirectives(src: string): DirectiveParse {
   const includes: string[] = [];
   const textures: TextureDirective[] = [];
   const buffers: BufferDirective[] = [];
+  const prevs: PrevDirective[] = [];
 
   let i = 0;
   for (; i < lines.length; i++) {
@@ -91,12 +105,19 @@ function parseLeadingDirectives(src: string): DirectiveParse {
       continue;
     }
 
+    if (body.startsWith("@prev")) {
+      const arg = body.slice("@prev".length).trim();
+      const name = parseNameOnly(arg);
+      prevs.push({ name });
+      continue;
+    }
+
     // unknown directive: keep comment in code
     kept.push(raw);
   }
 
   const rest = kept.concat(lines.slice(i)).join("\n");
-  return { keptPreambleLines: kept, includes, textures, buffers, rest };
+  return { keptPreambleLines: kept, includes, textures, buffers, prevs, rest };
 }
 
 function mergeUniqueByName<T extends { name: string }>(
@@ -133,16 +154,14 @@ export class ShaderPipelineBuilder {
       if (memo) return memo;
 
       if (visitingPass.has(file)) {
-        throw new Error(
-          `Cyclic dependency (buffer/include) on file: ${file}`
-        );
+        throw new Error(`Cyclic dependency (buffer/include) on file: ${file}`);
       }
       visitingPass.add(file);
 
       const src = this.readFile(file);
       if (src == null) throw new Error(`File not found: ${file}`);
 
-      const parsed = parseLeadingDirectives(src);
+      parseLeadingDirectives(src); // keep validation behavior consistent
 
       // expand includes (recursive), but with a per-pass include guard
       const includeGuard = new Set<string>();
@@ -154,6 +173,7 @@ export class ShaderPipelineBuilder {
 
         const texturesMap = new Map<string, TextureDirective>();
         const buffersMap = new Map<string, BufferDirective>();
+        const prevsMap = new Map<string, PrevDirective>();
 
         // merge directives from this file
         mergeUniqueByName(texturesMap, p.textures, (name, a, b) => {
@@ -166,14 +186,15 @@ export class ShaderPipelineBuilder {
             `Conflict @buffer "${name}" in ${f}: "${a.file}" vs "${b.file}"`
           );
         });
+        mergeUniqueByName(prevsMap, p.prevs, (name) => {
+          throw new Error(`Conflict @prev "${name}" in ${f}`);
+        });
 
         const includedCodes: string[] = [];
         for (const inc of p.includes) {
           if (includeGuard.has(inc)) continue;
           if (chain.includes(inc)) {
-            throw new Error(
-              `Cyclic @include: ${chain.join(" -> ")} -> ${inc}`
-            );
+            throw new Error(`Cyclic @include: ${chain.join(" -> ")} -> ${inc}`);
           }
           includeGuard.add(inc);
 
@@ -190,6 +211,9 @@ export class ShaderPipelineBuilder {
               `Conflict @buffer "${name}" via include: "${a.file}" vs "${b.file}"`
             );
           });
+          mergeUniqueByName(prevsMap, ex.prevs, (name) => {
+            throw new Error(`Conflict @prev "${name}" via include`);
+          });
         }
 
         const code = [...includedCodes, p.rest].filter(Boolean).join("\n");
@@ -197,6 +221,7 @@ export class ShaderPipelineBuilder {
           code,
           textures: [...texturesMap.values()],
           buffers: [...buffersMap.values()],
+          prevs: [...prevsMap.values()],
         };
       };
 
