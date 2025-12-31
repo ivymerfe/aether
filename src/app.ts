@@ -36,7 +36,7 @@ export class App {
   public renderer: ShaderRenderer;
   public editor: Editor;
 
-  public shouldReload: boolean = true;
+  public shouldReload: boolean = false;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -58,6 +58,7 @@ export class App {
     
     this.editor = new Editor(this, editorContainer, tabsContainer, treeContainer);
     
+    this.reload();
     setInterval(() => this.reloadRoutine(), 1000);
   }
 

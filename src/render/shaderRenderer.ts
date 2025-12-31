@@ -93,8 +93,6 @@ export class ShaderRenderer {
   private input: InputManager;
   private camera: Camera;
 
-  private vao: WebGLVertexArrayObject | null = null;
-
   private presentProgram: WebGLProgram | null = null;
   private uPresentTex: WebGLUniformLocation | null = null;
   private uPresentResolution: WebGLUniformLocation | null = null;
@@ -125,16 +123,14 @@ export class ShaderRenderer {
     if (!this.gl) {
       this.showError("WebGL2 not supported.");
     } else {
-      // WebGL2 требует VAO для gl_VertexID-пайплайна (корректнее явно создать)
-      this.vao = this.gl.createVertexArray();
-      this.gl.bindVertexArray(this.vao);
-
       this.gl.clearColor(0, 0, 0, 1);
       this.texturePool = new TexturePool(this.gl);
 
-      // Program used to present an offscreen texture to the canvas.
       this.presentProgram = this.createProgram(VERTEX_SCREEN, FRAG_PRESENT);
-      this.uPresentTex = this.gl.getUniformLocation(this.presentProgram, "uTex");
+      this.uPresentTex = this.gl.getUniformLocation(
+        this.presentProgram,
+        "uTex"
+      );
       this.uPresentResolution = this.gl.getUniformLocation(
         this.presentProgram,
         "uResolution"
@@ -280,9 +276,12 @@ export class ShaderRenderer {
           this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
           this.gl.viewport(0, 0, w, h);
 
-          if (this.presentProgram && this.uPresentTex && this.uPresentResolution) {
+          if (
+            this.presentProgram &&
+            this.uPresentTex &&
+            this.uPresentResolution
+          ) {
             this.gl.useProgram(this.presentProgram);
-            if (this.vao) this.gl.bindVertexArray(this.vao);
 
             this.gl.uniform2f(this.uPresentResolution, w, h);
             this.gl.activeTexture(this.gl.TEXTURE0);
@@ -314,7 +313,7 @@ export class ShaderRenderer {
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     } else if (pass.framebuffer && pass.needsRenderTarget) {
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, pass.framebuffer);
-      
+
       // If @prev is used, attach the correct ping-pong texture for writing this frame.
       if (pass.usesPrev && pass.tex0 && pass.tex1) {
         const readTex = pass.flip ? pass.tex0 : pass.tex1;
@@ -339,8 +338,6 @@ export class ShaderRenderer {
     }
 
     this.gl.useProgram(pass.program);
-    if (this.vao) this.gl.bindVertexArray(this.vao);
-
     this.gl.viewport(0, 0, w, h);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
@@ -353,7 +350,7 @@ export class ShaderRenderer {
         this.input.mouseX,
         this.input.mouseY,
         this.input.mouseZ ? 1.0 : 0.0,
-        this.input.mouseW ? 1.0 : 0.0,
+        this.input.mouseW ? 1.0 : 0.0
       );
     }
     if (pass.uCamPos) {
