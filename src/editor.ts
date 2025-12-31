@@ -124,6 +124,21 @@ export class Editor {
     this.renderTabs();
   }
 
+  updateCachedFile(path: string) {
+    if (this.loadedFiles[path]) {
+      const content = this.app.read(path);
+      if (content) {
+        const fileState = EditorState.create({
+          doc: content,
+          extensions: this.extensions
+        });
+        this.loadedFiles[path] = fileState;
+      } else {
+        delete this.loadedFiles[path];
+      }
+    }
+  }
+
   private loadFile(path: string) {
     if (this.loadedFiles[path]) {
       this.view.setState(this.loadedFiles[path]);

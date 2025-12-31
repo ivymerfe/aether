@@ -81,7 +81,6 @@ export class FileTreeView {
             const newGroup = input.value.trim();
             if (newGroup && newGroup !== oldGroup) {
               this.app.renameGroup(oldGroup, newGroup);
-              this.editor.reload();
               this.render();
             }
           } else if (target.classList.contains("tree-file")) {
@@ -90,7 +89,6 @@ export class FileTreeView {
             const newPath = input.value.trim();
             if (newPath && newPath !== oldPath && !this.app.exists(newPath)) {
               this.app.renameFile(oldPath, newPath);
-              this.editor.reload();
               this.render();
             }
           }
@@ -114,7 +112,6 @@ export class FileTreeView {
             const prev = target.previousElementSibling as HTMLElement;
             prev?.focus();
             this.app.deleteFile(target.dataset.path);
-            this.editor.closeTab(target.dataset.path);
             this.render();
           }
         }

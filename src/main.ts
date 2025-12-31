@@ -5,7 +5,6 @@ import './styles/top.css'
 import './styles/treeView.css'
 
 import { App } from './app'
-import { Editor } from './editor'
 
 const editorPanel = document.getElementById("editor-panel")!;
 const editorDiv = document.getElementById("editor")!;
@@ -17,8 +16,7 @@ const canvasContainer = document.getElementById("canvas-container")!;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const sidebarToggle = document.getElementById("sidebar-toggle")!;
 
-const app = new App(canvas, errorsDiv, statusDiv);
-const editor = new Editor(app, editorDiv, tabsDiv, treeViewDiv);
+const app = new App(canvas, errorsDiv, statusDiv, editorDiv, tabsDiv, treeViewDiv);
 
 function updateSidebarVisibility() {
     const isOpen = app.isSidebarOpen;
@@ -42,7 +40,7 @@ function showEditor(shown: boolean) {
   editorShown = shown;
   editorPanel.style.display = editorShown ? "" : "none";
   if (shown) {
-    editor.view.focus();
+    app.editor.view.focus();
   }
 }
 

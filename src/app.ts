@@ -1,3 +1,4 @@
+import { Editor } from "./editor";
 import { InputManager } from "./inputManager";
 import { ShaderRenderer } from "./render/shaderRenderer";
 
@@ -33,13 +34,17 @@ export class App {
 
   public inputManager: InputManager;
   public renderer: ShaderRenderer;
+  public editor: Editor;
 
   public shouldReload: boolean = true;
 
   constructor(
     canvas: HTMLCanvasElement,
     errorsDiv: HTMLDivElement,
-    statusDiv: HTMLDivElement
+    statusDiv: HTMLDivElement,
+    editorContainer: HTMLElement,
+    tabsContainer: HTMLElement,
+    treeContainer: HTMLElement
   ) {
     this.inputManager = new InputManager();
     this.renderer = new ShaderRenderer(this, canvas, errorsDiv, statusDiv);
@@ -50,6 +55,9 @@ export class App {
     } else {
       this.state = DEFAULT_STATE;
     }
+    
+    this.editor = new Editor(this, editorContainer, tabsContainer, treeContainer);
+    
     setInterval(() => this.reloadRoutine(), 1000);
   }
 
@@ -100,6 +108,7 @@ export class App {
 
   deleteFile(path: string) {
     delete this.state.files[path];
+    this.editor.closeTab(path);
     this.save();
   }
 
@@ -109,8 +118,9 @@ export class App {
       this.state.files[newPath] = content;
       delete this.state.files[oldPath];
 
-      this.closeTab(oldPath);
-      this.openTab(newPath);
+      this.renameTab(oldPath, newPath);
+      this.fixImports(oldPath, newPath);
+      this.editor.reload();
 
       this.save();
     }
@@ -118,15 +128,20 @@ export class App {
 
   renameGroup(oldGroup: string, newGroup: string) {
     const files = Object.keys(this.state.files);
+    const renamed = [];
     for (const file of files) {
       if (file.startsWith(oldGroup + ".")) {
         const newFile = newGroup + file.slice(oldGroup.length);
         this.state.files[newFile] = this.state.files[file];
         delete this.state.files[file];
 
-        this.closeTab(file);
-        this.openTab(newFile);
+        renamed.push({ old: file, new: newFile });
+
+        this.renameTab(file, newFile);
       }
+    }
+    for (const pair of renamed) {
+      this.fixImports(pair.old, pair.new);
     }
     const wasExpanded = this.isGroupExpanded(oldGroup);
     const idx = this.state.expandedGroups.indexOf(oldGroup);
@@ -136,7 +151,26 @@ export class App {
     if (wasExpanded) {
       this.state.expandedGroups.push(newGroup);
     }
+    this.editor.reload();
     this.save();
+  }
+
+  fixImports(oldPath: string, newPath: string) {
+    const files = Object.keys(this.state.files);
+    for (const file of files) {
+      let content = this.state.files[file];
+      if (content.includes(oldPath)) {
+        const lines = content.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          const trimmed = lines[i].trim();
+          if (trimmed.startsWith("//")) {
+            lines[i] = lines[i].replace(oldPath, newPath);
+          }
+        }
+        this.state.files[file] = lines.join("\n");
+        this.editor.updateCachedFile(file);
+      }
+    }
   }
 
   get openTabs(): string[] {
@@ -183,6 +217,13 @@ export class App {
         this.state.openTabs.length > 0 ? this.state.openTabs[newIdx] : null;
     }
     this.save();
+  }
+
+  renameTab(oldPath: string, newPath: string) {
+    const idx = this.state.openTabs.indexOf(oldPath);
+    if (idx !== -1) {
+      this.state.openTabs[idx] = newPath;
+    }
   }
 
   setActiveTab(path: string) {
