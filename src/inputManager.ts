@@ -31,20 +31,21 @@ export class InputManager {
     window.addEventListener("keydown", (e) => {
       this.lastKey = e.code;
       if (this.inputLocked || this.keyState[e.code] || this.lookButtonDown) {
+        console.log(e.key);
         e.preventDefault();
         if (!e.altKey) e.stopImmediatePropagation();
       }
       if (this.inputLocked) {
         this.keyState[e.code] = true;
       }
-    });
+    }, true);
     window.addEventListener("keyup", (e) => {
       this.keyState[e.code] = false;
       if (this.inputLocked) {
         e.preventDefault();
         if (!e.altKey) e.stopImmediatePropagation();
       }
-    });
+    }, true);
     this.canvas.addEventListener("dblclick", (e) => {
       if (e.button === this.lookButton) {
         this.setInputLock(true);
@@ -78,12 +79,12 @@ export class InputManager {
       if (e.target !== this.canvas) {
         this.setInputLock(false);
       }
-    });
+    }, true);
     window.addEventListener("mouseup", (e) => {
       if (e.button === this.lookButton) {
         this.lookButtonDown = false;
       }
-    });
+    }, true);
     window.addEventListener("mousemove", (e) => {
       if (this.lookButtonDown || this.inputLocked) {
         this.camera.onMouse(e.movementX * -this.sensitivityX, e.movementY * -this.sensitivityY);

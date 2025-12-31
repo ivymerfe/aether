@@ -54,6 +54,7 @@ export class ShaderRenderer {
   private animationId: number | null = null;
   private startTime: number = 0;
   private lastRenderTime: number = 0;
+  private lastCompileDuration: number = 0;
 
   private app: App;
   private input: InputManager;
@@ -101,15 +102,19 @@ export class ShaderRenderer {
   }
 
   loadShader(file: string) {
-    if (this.compile(file)) {
+    const currentTime = performance.now();
+    const success = this.compile(file);
+    this.lastCompileDuration = performance.now() - currentTime;
+    if (success) {
       this.start();
     }
   }
 
   private updateStatus(fps: number) {
     const safe = Number.isFinite(fps) ? fps : 0;
-    const status =
+    var status =
       `${safe.toFixed(1)} FPS` + (this.input.inputLocked ? " | MOVE" : "");
+    status += `\nCompile: ${this.lastCompileDuration.toFixed(1)} ms`;
     this.statusDiv.textContent = status;
   }
 
@@ -120,7 +125,6 @@ export class ShaderRenderer {
   private clearError() {
     this.errorsDiv.textContent = "";
   }
-
   compile(file: string): boolean {
     if (!this.gl || !this.texturePool) return false;
 
@@ -129,14 +133,13 @@ export class ShaderRenderer {
       this.pipelineDesc = this.pipelineBuilder.build(file);
 
       // compile programs for passes
-      this.disposePassResources();
-      this.passes = [];
-      this.passByFile.clear();
+      const newPasses: CompiledPass[] = [];
+      const newPassByFile = new Map<string, CompiledPass>();
 
       for (const pass of this.pipelineDesc.passesInOrder) {
         const compiled = this.compilePass(pass);
-        this.passes.push(compiled);
-        this.passByFile.set(compiled.file, compiled);
+        newPasses.push(compiled);
+        newPassByFile.set(compiled.file, compiled);
       }
 
       // create FBO textures for passes that are referenced as buffers
@@ -145,7 +148,7 @@ export class ShaderRenderer {
       for (const p of this.pipelineDesc.passesInOrder) {
         for (const b of p.expanded.buffers) referencedAsBuffer.add(b.file);
       }
-      for (const p of this.passes) {
+      for (const p of newPasses) {
         if (referencedAsBuffer.has(p.file)) {
           this.ensurePassRenderTarget(p);
         }
@@ -157,6 +160,9 @@ export class ShaderRenderer {
           this.texturePool.get(t.url);
         }
       }
+      this.disposePassResources();
+      this.passes = newPasses;
+      this.passByFile = newPassByFile;
 
       this.clearError();
       return true;
@@ -182,10 +188,7 @@ export class ShaderRenderer {
       }
 
       const now = performance.now();
-      const deltaTime = Math.max(
-        0.000001,
-        (now - this.lastRenderTime) / 1000.0
-      );
+      const deltaTime = (now - this.lastRenderTime) / 1000.0;
       this.input.tick(deltaTime);
       this.updateStatus(1.0 / deltaTime);
       this.lastRenderTime = now;
@@ -518,3 +521,4 @@ void main() {
     return program;
   }
 }
+      

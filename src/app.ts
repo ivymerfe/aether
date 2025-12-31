@@ -34,6 +34,8 @@ export class App {
   public inputManager: InputManager;
   public renderer: ShaderRenderer;
 
+  public shouldReload: boolean = true;
+
   constructor(
     canvas: HTMLCanvasElement,
     errorsDiv: HTMLDivElement,
@@ -48,8 +50,13 @@ export class App {
     } else {
       this.state = DEFAULT_STATE;
     }
-    if (this.state.loadedShader) {
+    setInterval(() => this.reloadRoutine(), 1000);
+  }
+
+  reloadRoutine() {
+    if (this.shouldReload && this.state.loadedShader) {
       this.renderer.loadShader(this.state.loadedShader);
+      this.shouldReload = false;
     }
   }
 
@@ -77,9 +84,7 @@ export class App {
     this.state.files[path] = content;
     this.save();
     if (!hasError) {
-      if (this.state.loadedShader) {
-        this.renderer.loadShader(this.state.loadedShader);
-      }
+      this.shouldReload = true;
     }
   }
 
