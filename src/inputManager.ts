@@ -78,6 +78,10 @@ export class InputManager {
       this.mouseX = e.clientX - rect.left;
       this.mouseY = rect.bottom - e.clientY;
     });
+    this.canvas.addEventListener("mouseleave", (e) => {
+      this.mouseZ = false;
+      this.mouseW = false;
+    });
     window.addEventListener("mousedown", (e) => {
       if (e.button === this.moveButton) {
         this.lastKey = "MoveButton";
