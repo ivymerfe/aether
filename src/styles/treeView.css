@@ -4,6 +4,7 @@
 
 #tree-view {
   flex: 0.3;
+  min-width: max-content;
   height: 100%;
   background-color: var(--bg-panel);
   border-right: 1px solid var(--border-color);
@@ -37,17 +38,17 @@
 }
 
 .tree-load-button {
-  right: 0.5rem;
+  right: 0;
   top: 0;
 }
 
 .tree-input {
-  padding: 0 0.25rem;
+  padding-right: 1.5rem;
   height: var(--tree-element-height);
   line-height: var(--tree-element-height);
   box-sizing: border-box;
   font-size: large;
-  width: 100%;
+  width: 16ch;
   margin: 0;
   background: none;
   border: none;
@@ -63,6 +64,7 @@
 }
 
 .tree-input:read-write {
+  width: 25ch;
   pointer-events: all;
   cursor: text;
   background-color: #252525;

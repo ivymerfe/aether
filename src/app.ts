@@ -65,13 +65,13 @@ export class App {
   reloadRoutine() {
     if (this.shouldReload && this.state.loadedShader) {
       this.reload();
+      this.shouldReload = false;
     }
   }
 
   reload() {
     if (this.state.loadedShader) {
       this.renderer.loadShader(this.state.loadedShader);
-      this.shouldReload = false;
     }
   }
 
@@ -98,9 +98,7 @@ export class App {
   write(path: string, content: string, hasError: boolean) {
     this.state.files[path] = content;
     this.save();
-    if (!hasError) {
-      this.shouldReload = true;
-    }
+    this.shouldReload = true;
   }
 
   listFiles(): string[] {

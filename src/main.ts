@@ -44,24 +44,28 @@ function showEditor(shown: boolean) {
   }
 }
 
+window.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) e.preventDefault();
+},true);
+window.addEventListener("mouseup", (e) => {
+  if (e.button !== 0) e.preventDefault();
+},true);
+
 window.addEventListener("keydown", async (e) => {
-  if (e.code == "AltLeft") e.preventDefault();
+  if (e.altKey || (e.ctrlKey && e.shiftKey)) e.preventDefault();
 
   if (e.code == "KeyG" && e.altKey) {
     app.reload();
-    e.preventDefault();
   }
   
   if (e.code == "KeyR" && e.altKey) {
     showEditor(!editorShown);
-    e.preventDefault();
   }
   
   if (e.code == "KeyQ" && e.altKey) {
     canvasContainer.classList.toggle("canvas-aspect");
     canvasContainer.classList.toggle("canvas-max");
     resizeCanvas();
-    e.preventDefault();
   }
   
   if (e.code == "KeyF" && e.altKey) {
@@ -74,7 +78,6 @@ window.addEventListener("keydown", async (e) => {
       await canvas.requestPointerLock();
       app.inputManager.setInputLock(true);
     }
-    e.preventDefault();
   }
 });
 

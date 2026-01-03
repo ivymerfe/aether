@@ -68,6 +68,7 @@ type CompiledPass = {
   samplers: SamplerBinding[];
 
   // uniform locations
+  uFrameNumber: WebGLUniformLocation | null;
   uTime: WebGLUniformLocation | null;
   uResolution: WebGLUniformLocation | null;
   uMouse: WebGLUniformLocation | null;
@@ -88,6 +89,7 @@ export class ShaderRenderer {
   private startTime: number = 0;
   private lastRenderTime: number = 0;
   private lastCompileDuration: number = 0;
+  private frameNumber: number = 0;
 
   private app: App;
   private input: InputManager;
@@ -240,6 +242,7 @@ export class ShaderRenderer {
 
     this.stop();
 
+    this.frameNumber = 0;
     this.lastRenderTime = performance.now();
 
     const render = () => {
@@ -293,6 +296,7 @@ export class ShaderRenderer {
         }
       }
 
+      this.frameNumber++;
       this.animationId = requestAnimationFrame(render);
     };
 
@@ -342,6 +346,7 @@ export class ShaderRenderer {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     // common uniforms
+    if (pass.uFrameNumber) this.gl.uniform1i(pass.uFrameNumber, this.frameNumber);
     if (pass.uTime) this.gl.uniform1f(pass.uTime, opts.timeSec);
     if (pass.uResolution) this.gl.uniform2f(pass.uResolution, w, h);
     if (pass.uMouse) {
@@ -440,6 +445,7 @@ export class ShaderRenderer {
     const fragSrc = `#version 300 es
 precision highp float;
 
+uniform int iFrame;
 uniform float iTime;
 uniform vec2 iResolution;
 uniform vec4 iMouse;
@@ -487,6 +493,7 @@ void main() {
 
       samplers,
 
+      uFrameNumber: this.gl.getUniformLocation(program, "iFrame"),
       uTime: this.gl.getUniformLocation(program, "iTime"),
       uResolution: this.gl.getUniformLocation(program, "iResolution"),
       uMouse: this.gl.getUniformLocation(program, "iMouse"),
